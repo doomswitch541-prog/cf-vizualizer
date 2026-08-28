@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-labelledby="title desc">
+  <title id="title">Coldflame complete release archive</title>
+  <desc id="desc">Five Coldflame release covers orbit a dark archive title card.</desc>
+  <defs>
+    <linearGradient id="ground" x1="0" y1="0" x2="1" y2="0.9">
+      <stop offset="0" stop-color="#08090b"/><stop offset="0.54" stop-color="#0b0d12"/><stop offset="1" stop-color="#08090b"/>
+    </linearGradient>
+    <radialGradient id="blue" cx="78%" cy="47%" r="42%"><stop offset="0" stop-color="#2a4eba" stop-opacity="0.34"/><stop offset="1" stop-color="#2a4eba" stop-opacity="0"/></radialGradient>
+    <radialGradient id="acid" cx="92%" cy="72%" r="30%"><stop offset="0" stop-color="#d2f606" stop-opacity="0.18"/><stop offset="1" stop-color="#d2f606" stop-opacity="0"/></radialGradient>
+    <radialGradient id="mint" cx="64%" cy="20%" r="27%"><stop offset="0" stop-color="#a2ffd2" stop-opacity="0.16"/><stop offset="1" stop-color="#a2ffd2" stop-opacity="0"/></radialGradient>
+    <linearGradient id="spectrum" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#d2f606"/><stop offset="0.52" stop-color="#7e96d2"/><stop offset="1" stop-color="#ee4c95" stop-opacity="0"/></linearGradient>
+    <filter id="shadow" x="-60%" y="-60%" width="220%" height="220%"><feDropShadow dx="0" dy="18" stdDeviation="18" flood-color="#000000" flood-opacity="0.76"/></filter>
+    <filter id="grain" x="0" y="0" width="100%" height="100%"><feTurbulence type="fractalNoise" baseFrequency="0.84" numOctaves="3" seed="28" stitchTiles="stitch"/><feColorMatrix type="saturate" values="0"/></filter>
+  </defs>
+
+  <rect width="1200" height="630" fill="url(#ground)"/><rect width="1200" height="630" fill="url(#blue)"/><rect width="1200" height="630" fill="url(#acid)"/><rect width="1200" height="630" fill="url(#mint)"/>
+  <rect x="18.5" y="18.5" width="1163" height="593" fill="none" stroke="#f4f6f8" stroke-opacity="0.16"/>
+  <g fill="none" stroke="#f4f6f8" stroke-opacity="0.1"><line x1="888" y1="36" x2="888" y2="594"/><line x1="622" y1="315" x2="1170" y2="315"/></g>
+
+  <g font-family="Consolas, Cascadia Mono, monospace">
+    <text x="66" y="93" fill="#a2ffd2" font-size="14" letter-spacing="2.7">NORTHERN CALIFORNIA · 2021—2025</text>
+    <text x="68" y="542" fill="#f4f6f8" fill-opacity="0.44" font-size="11" letter-spacing="2">ARTWORK-REACTIVE LISTENING ROOM</text>
+    <text x="1088" y="576" fill="#f4f6f8" fill-opacity="0.44" font-size="10" letter-spacing="1.4" text-anchor="end">ARCHIVE NO. 001</text>
+  </g>
+  <text x="62" y="245" fill="#f4f6f8" font-family="Arial Narrow, Bahnschrift Condensed, Arial, sans-serif" font-size="126" font-weight="800" letter-spacing="-7" textLength="570" lengthAdjust="spacingAndGlyphs">COLDFLAME</text>
+  <text x="67" y="302" fill="#f4f6f8" fill-opacity="0.72" font-family="Arial Narrow, Bahnschrift Condensed, Arial, sans-serif" font-size="35" font-weight="600" letter-spacing="3.2">COMPLETE RELEASE ARCHIVE</text>
+  <rect x="68" y="342" width="470" height="1.5" fill="url(#spectrum)"/>
+
+  <g font-family="Consolas, Cascadia Mono, monospace" transform="translate(68 382)">
+    <g><text x="0" y="18" fill="#f4f6f8" font-size="18">07</text><text x="30" y="17" fill="#f4f6f8" fill-opacity="0.58" font-size="11" letter-spacing="1.3">TRACKS</text></g>
+    <g transform="translate(124 0)"><text x="0" y="18" fill="#f4f6f8" font-size="18">05</text><text x="30" y="17" fill="#f4f6f8" fill-opacity="0.58" font-size="11" letter-spacing="1.3">RELEASES</text></g>
+    <g transform="translate(282 0)"><text x="0" y="18" fill="#f4f6f8" font-size="18">25:25</text><text x="64" y="17" fill="#f4f6f8" fill-opacity="0.58" font-size="11" letter-spacing="1.3">RUNTIME</text></g>
+  </g>
+
+  <g transform="translate(624 35)">
+    <g fill="none" stroke="#f4f6f8" stroke-opacity="0.16"><ellipse cx="270" cy="278" rx="226" ry="220"/><path d="M270 58 476 187 432 415 270 498 108 415 64 187Z"/></g>
+    <g fill="#a2ffd2" stroke="#a2ffd2" stroke-opacity="0.32" stroke-width="8"><circle cx="270" cy="58" r="4"/><circle cx="446" cy="137" r="4"/><circle cx="490" cy="330" r="4"/><circle cx="369" cy="474" r="4"/><circle cx="171" cy="474" r="4"/><circle cx="50" cy="330" r="4"/><circle cx="94" cy="137" r="4"/></g>
+    <g filter="url(#shadow)" transform="rotate(-6 114 112)"><rect x="36" y="34" width="156" height="156" fill="#08090b" stroke="#f4f6f8" stroke-opacity="0.26"/><image href="../coldflame/artwork/2021-lose-myself.jpg" x="42" y="40" width="144" height="144" preserveAspectRatio="xMidYMid slice"/><path d="M32 48V30h18M178 194h18v-18" fill="none" stroke="#d2f606"/></g>
+    <g filter="url(#shadow)" transform="rotate(4 433 120)"><rect x="342" y="28" width="182" height="182" fill="#08090b" stroke="#f4f6f8" stroke-opacity="0.26"/><image href="../coldflame/artwork/2022-youre-gone.jpg" x="348" y="34" width="170" height="170" preserveAspectRatio="xMidYMid slice"/><path d="M338 42V24h18M510 214h18v-18" fill="none" stroke="#d2f606"/></g>
+    <g filter="url(#shadow)"><rect x="124" y="132" width="300" height="300" fill="#08090b" stroke="#f4f6f8" stroke-opacity="0.32"/><image href="../coldflame/artwork/2023-3.jpg" x="132" y="140" width="284" height="284" preserveAspectRatio="xMidYMid slice"/><path d="M120 150v-22h22M406 436h22v-22" fill="none" stroke="#d2f606" stroke-width="1.5"/></g>
+    <g filter="url(#shadow)" transform="rotate(-3 445 449)"><rect x="350" y="354" width="190" height="190" fill="#08090b" stroke="#f4f6f8" stroke-opacity="0.26"/><image href="../coldflame/artwork/2024-break-me-down.jpg" x="356" y="360" width="178" height="178" preserveAspectRatio="xMidYMid slice"/><path d="M346 368v-18h18M526 548h18v-18" fill="none" stroke="#d2f606"/></g>
+    <g filter="url(#shadow)" transform="rotate(5 114 452)"><rect x="28" y="366" width="174" height="174" fill="#08090b" stroke="#f4f6f8" stroke-opacity="0.26"/><image href="../coldflame/artwork/2025-die-for-me.jpg" x="34" y="372" width="162" height="162" preserveAspectRatio="xMidYMid slice"/><path d="M24 380v-18h18M188 544h18v-18" fill="none" stroke="#d2f606"/></g>
+  </g>
+
+  <g transform="translate(1121 540) rotate(45)"><rect x="-24" y="-24" width="48" height="48" fill="#08090b" stroke="#d2f606" stroke-opacity="0.7"/><text x="0" y="5" fill="#d2f606" font-family="Consolas, monospace" font-size="13" font-weight="700" text-anchor="middle" transform="rotate(-45)">CF</text></g>
+  <rect width="1200" height="630" filter="url(#grain)" opacity="0.045" style="mix-blend-mode:soft-light"/>
+</svg>

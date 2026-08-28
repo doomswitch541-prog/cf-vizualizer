@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="en" data-ready="false">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#08090b">
+  <meta name="color-scheme" content="dark">
+  <meta name="description" content="The complete Coldflame release archive: seven tracks, five releases, and an artwork-reactive visualizer.">
+  <meta name="robots" content="noindex, nofollow">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Coldflame — Complete Release Archive">
+  <meta property="og:description" content="Seven tracks. Five releases. One artwork-reactive listening room.">
+  <meta property="og:image" content="/assets/share/coldflame-archive-card.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Coldflame complete release archive with five album covers">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Coldflame — Complete Release Archive">
+  <meta name="twitter:description" content="Seven tracks. Five releases. One artwork-reactive listening room.">
+  <meta name="twitter:image" content="/assets/share/coldflame-archive-card.png">
+  <title>Coldflame — Complete Release Archive</title>
+  <link rel="icon" href="assets/coldflame/artwork-web/2024-break-me-down.jpg">
+  <link rel="stylesheet" href="styles.css?v=20260828-1">
+  <script type="module" src="app.js?v=20260828-1"></script>
+</head>
+<body>
+  <div class="art-wash" id="art-wash" aria-hidden="true"></div>
+  <div class="grain" aria-hidden="true"></div>
+
+  <header class="masthead">
+    <a class="identity" href="#experience" aria-label="Coldflame archive home">
+      <span class="identity-mark"><span>CF</span></span>
+      <span class="identity-copy">
+        <strong>Coldflame</strong>
+        <small>Complete release archive</small>
+      </span>
+    </a>
+
+    <div class="archive-tally" aria-label="Archive totals">
+      <span><strong>07</strong> tracks</span>
+      <span><strong>05</strong> releases</span>
+      <span><strong>25:25</strong> runtime</span>
+    </div>
+
+    <div class="masthead-actions">
+      <button class="text-button" id="about-button" type="button">About</button>
+      <button class="share-button" id="share-button" type="button">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8.75 8.75 12 5.5l3.25 3.25M12 5.75v9.5M6.75 11.75H5.5a1.5 1.5 0 0 0-1.5 1.5v5.25A1.5 1.5 0 0 0 5.5 20h13a1.5 1.5 0 0 0 1.5-1.5v-5.25a1.5 1.5 0 0 0-1.5-1.5h-1.25"/></svg>
+        <span>Share</span>
+      </button>
+    </div>
+  </header>
+
+  <main class="experience" id="experience">
+    <nav class="catalog-rail" aria-label="Coldflame tracks">
+      <div class="rail-heading">
+        <span>Release chronology</span>
+        <button class="queue-close" id="queue-close" type="button" aria-label="Close track list">Close</button>
+      </div>
+      <ol class="track-list" id="track-list"></ol>
+      <div class="rail-foot">
+        <span>Northern California</span>
+        <span>2021—2025</span>
+      </div>
+    </nav>
+
+    <section class="visual-stage" id="visual-stage" aria-label="Audio-reactive artwork">
+      <canvas id="visualizer-canvas" aria-hidden="true"></canvas>
+      <div class="stage-wordmark" aria-hidden="true">COLDFLAME</div>
+
+      <div class="visual-anchor" id="visual-anchor">
+        <div class="cover-frame">
+          <img id="stage-cover" src="assets/coldflame/artwork-web/2021-lose-myself.jpg" alt="Lose Myself cover art">
+          <div class="cover-sheen" aria-hidden="true"></div>
+        </div>
+        <div class="release-caption">
+          <span id="release-year">2021</span>
+          <span class="caption-rule" aria-hidden="true"></span>
+          <span id="release-name">Lose Myself — Single</span>
+        </div>
+      </div>
+
+      <div class="stage-meter" aria-hidden="true">
+        <span>B</span><i id="bass-meter"></i>
+        <span>M</span><i id="mid-meter"></i>
+        <span>T</span><i id="treble-meter"></i>
+      </div>
+
+      <button class="stage-action fullscreen-button" id="fullscreen-button" type="button" aria-label="Enter full visualizer view">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4H4v5M15 4h5v5M20 15v5h-5M9 20H4v-5"/></svg>
+      </button>
+
+      <button class="stage-action queue-button" id="queue-button" type="button" aria-label="Open track list">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7h14M5 12h14M5 17h9"/></svg>
+      </button>
+
+      <div class="gesture-note" id="gesture-note" aria-hidden="true">Hold the field to increase energy</div>
+    </section>
+
+    <aside class="player-panel" aria-label="Player controls">
+      <div class="player-status">
+        <span class="signal-dot" aria-hidden="true"></span>
+        <span id="playback-status">Ready to play</span>
+        <span id="track-position">01 / 07</span>
+      </div>
+
+      <div class="now-playing">
+        <p class="eyebrow" id="now-release">Lose Myself — Single</p>
+        <h1 id="track-title">Lose Myself</h1>
+        <p class="artist-name">Coldflame</p>
+      </div>
+
+      <div class="timeline">
+        <input id="seek" type="range" min="0" max="1000" value="0" step="1" aria-label="Track position">
+        <div class="time-row">
+          <time id="elapsed" datetime="PT0S">0:00</time>
+          <time id="duration" datetime="PT3M18S">3:18</time>
+        </div>
+      </div>
+
+      <div class="transport">
+        <button id="previous-button" type="button" aria-label="Previous track">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 5v14M18 6.5 9 12l9 5.5z"/></svg>
+        </button>
+        <button class="play-button" id="play-button" type="button" aria-label="Play Lose Myself">
+          <svg class="play-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m8 5 11 7-11 7z"/></svg>
+          <svg class="pause-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14M16 5v14"/></svg>
+        </button>
+        <button id="next-button" type="button" aria-label="Next track">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 5v14M6 6.5l9 5.5-9 5.5z"/></svg>
+        </button>
+      </div>
+
+      <div class="utility-row">
+        <button class="mute-button" id="mute-button" type="button" aria-label="Mute">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10v4h4l5 4V6L8 10H4zM16 9.25a4 4 0 0 1 0 5.5M18.5 7a7 7 0 0 1 0 10"/></svg>
+        </button>
+        <input id="volume" type="range" min="0" max="1" value="0.82" step="0.01" aria-label="Volume">
+        <span id="volume-value">82</span>
+      </div>
+
+      <div class="palette-block">
+        <div class="palette-heading">
+          <span>Artwork signal</span>
+          <span id="release-count">Release 01 / 05</span>
+        </div>
+        <div class="palette-swatches" id="palette-swatches" aria-label="Active artwork palette"></div>
+      </div>
+
+      <div class="source-row">
+        <span>Official release audio</span>
+        <a id="release-link" href="https://music.apple.com/us/artist/coldflame/1572386538" target="_blank" rel="noopener">Release data ↗</a>
+      </div>
+    </aside>
+  </main>
+
+  <footer class="site-footer">
+    <p>Coldflame · complete release archive · artwork-reactive playback</p>
+    <p class="footer-state"><span id="audio-format">AAC / M4A</span><span aria-hidden="true">·</span><span>No tracking</span></p>
+  </footer>
+
+  <audio id="audio" preload="metadata"></audio>
+
+  <dialog class="about-dialog" id="about-dialog">
+    <button class="dialog-close" id="dialog-close" type="button" aria-label="Close about panel">×</button>
+    <p class="eyebrow">The archive</p>
+    <h2>Seven songs.<br>Five visual identities.</h2>
+    <p>This listening room follows Coldflame's complete released catalog from 2021 through 2025. Each scene takes its color system from the official cover attached to the song.</p>
+    <p>The audio is analyzed in your browser after you press play. Nothing is recorded, uploaded, or tracked.</p>
+    <div class="dialog-links">
+      <a href="https://linktr.ee/coldflame" target="_blank" rel="noopener">Coldflame links ↗</a>
+      <a href="https://music.apple.com/us/artist/coldflame/1572386538" target="_blank" rel="noopener">Apple Music ↗</a>
+      <a href="https://open.spotify.com/artist/0RxsInNwfo6uf5fbWAB7O4" target="_blank" rel="noopener">Spotify ↗</a>
+    </div>
+  </dialog>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <noscript>This archive needs JavaScript for playback and visualization.</noscript>
+</body>
+</html>

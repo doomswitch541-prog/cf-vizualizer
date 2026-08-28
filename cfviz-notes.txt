@@ -1,0 +1,18 @@
+/cf-vizualizer/
+
+
+--------Didn't Do This Yet---------------
+
+Convert them all to one line
+
+│ > before pro ends can you write what we've done and the current state of things to readme.md or another notes.md file │
+
+maybe add a more minimal and cyber like feel along with the glassmorphism (because the design just isn't looking    │
+│   like its done by the top 0.01% of designers)
+
+
+-------- ENDED HERE -------
+
+remember i used to code front end and nodejs for 8 years. it seems like a flexbox issue.
+because the player is working fine and the design is fine on mobile,
+but on desktop now the player is stacked horizontally instead of vertically like a normal music player

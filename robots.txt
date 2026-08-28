@@ -1,0 +1,4 @@
+User-agent: *
+Disallow: /
+
+# Temporary: remove this block and the page-level noindex directive when logging is ready.

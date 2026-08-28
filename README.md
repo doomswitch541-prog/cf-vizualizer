@@ -1,0 +1,30 @@
+# Coldflame visualizer
+
+A static, artwork-reactive listening room for Coldflame's complete seven-track catalog.
+
+The visualizer is vanilla HTML, CSS, and JavaScript with no framework, build step, tracking, or third-party runtime dependency. Release metadata and palette roles live in `data/coldflame.json`; deploy-ready audio and artwork live in `assets/coldflame/`.
+
+The archive masters retain their full embedded covers. The deploy audio is losslessly copied into fast-start, audio-only M4A files, while `artwork-web/` carries 1200×1200 derivatives of the exact official covers. This keeps phone playback light without changing the AAC stream.
+
+## Run locally
+
+Serve the repository with any static server and open the root page. For example:
+
+```powershell
+npx.cmd serve .
+```
+
+Browsers require a user gesture before Web Audio analysis begins, so press Play once after loading. Playback still uses the native `<audio>` element underneath the custom controls.
+
+## Controls
+
+- Space: play or pause
+- Left / right arrow: previous or next track
+- M: mute or restore volume
+- F: enter or leave the visualizer view
+
+The Share control uses the native OS share sheet when available and falls back to copying the current track and URL.
+
+## Source relationship
+
+`../archive/library/coldflame/` is the canonical archive. Media here is a same-origin deployment replica whose integrity is recorded in the shared catalog.
