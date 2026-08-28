@@ -2,6 +2,8 @@
 
 A static, artwork-reactive listening room for Coldflame's complete seven-track catalog.
 
+Public page: <https://doomswitch541-prog.github.io/cf-vizualizer/>
+
 The visualizer is vanilla HTML, CSS, and JavaScript with no framework, build step, tracking, or third-party runtime dependency. Release metadata and palette roles live in `data/coldflame.json`; deploy-ready audio and artwork live in `assets/coldflame/`.
 
 The archive masters retain their full embedded covers. The deploy audio is losslessly copied into fast-start, audio-only M4A files, while `artwork-web/` carries 1200×1200 derivatives of the exact official covers. This keeps phone playback light without changing the AAC stream.
@@ -24,6 +26,10 @@ Browsers require a user gesture before Web Audio analysis begins, so press Play 
 - F: enter or leave the visualizer view
 
 The Share control uses the native OS share sheet when available and falls back to copying the current track and URL.
+
+## Hosting
+
+GitHub Pages publishes the root of `main`. `.nojekyll` keeps the repository fully static. The temporary `noindex` directive stays in place until audience logging is ready; it does not prevent anyone with the URL from opening or sharing the page.
 
 ## Source relationship
 
