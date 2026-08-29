@@ -451,26 +451,36 @@ a {
   transition: border-color 800ms ease, box-shadow 800ms ease;
 }
 
-.cover-frame::before,
-.cover-frame::after {
-  content: "";
+.cover-border-orbit {
   position: absolute;
-  width: 18px;
-  height: 18px;
-  border-color: var(--accent);
-  border-style: solid;
-  transition: border-color 800ms ease;
+  z-index: 4;
+  inset: -5px;
+  pointer-events: none;
+  transform: rotate(var(--corner-turn, 0deg)) scale(var(--corner-scale, 1));
+  transform-origin: center;
+  will-change: transform;
 }
 
-.cover-frame::before {
-  top: -5px;
-  left: -5px;
+.cover-border-orbit i {
+  position: absolute;
+  width: calc(18px + var(--corner-grow, 0px));
+  height: calc(18px + var(--corner-grow, 0px));
+  border-color: var(--corner-color, var(--accent));
+  border-style: solid;
+  filter: drop-shadow(0 0 var(--corner-glow, 0px) var(--corner-color, var(--accent)));
+  opacity: var(--corner-opacity, 0.82);
+  transition: border-color 500ms ease;
+}
+
+.cover-border-orbit i:first-child {
+  top: 0;
+  left: 0;
   border-width: 1px 0 0 1px;
 }
 
-.cover-frame::after {
-  right: -5px;
-  bottom: -5px;
+.cover-border-orbit i:last-child {
+  right: 0;
+  bottom: 0;
   border-width: 0 1px 1px 0;
 }
 
@@ -545,10 +555,25 @@ a {
 .stage-meter i {
   display: block;
   width: 8%;
-  height: 1px;
+  height: 2px;
   background: var(--highlight);
   box-shadow: 0 0 8px var(--secondary);
-  transition: width 80ms linear, background-color 600ms ease;
+  transition: width 80ms linear, background-color 500ms ease, box-shadow 500ms ease;
+}
+
+#bass-meter {
+  background: var(--secondary);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--secondary) 54%, transparent);
+}
+
+#mid-meter {
+  background: var(--accent);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--accent) 54%, transparent);
+}
+
+#treble-meter {
+  background: var(--highlight);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--highlight) 54%, transparent);
 }
 
 .stage-action {
@@ -805,6 +830,14 @@ body[data-playing="true"] .play-button .pause-icon {
   color: var(--muted);
   font: 8px/1 var(--utility);
   text-align: right;
+}
+
+.device-volume-note {
+  display: none;
+  color: var(--muted);
+  font: 8px/1 var(--utility);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
 }
 
 .palette-block {
@@ -1196,6 +1229,19 @@ html[data-ready="true"] .site-footer {
   .intensity-options button {
     min-height: 44px;
     padding-inline: 12px;
+  }
+
+  .utility-row {
+    grid-template-columns: 40px minmax(0, 1fr);
+  }
+
+  #volume,
+  #volume-value {
+    display: none;
+  }
+
+  .device-volume-note {
+    display: block;
   }
 
   .now-playing {

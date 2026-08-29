@@ -1,4 +1,4 @@
-import { ColdflameVisualizer } from "./visualizer.js?v=20260829-1";
+import { ColdflameVisualizer } from "./visualizer.js?v=20260829-2";
 
 const elements = {
   audio: document.querySelector("#audio"),
