@@ -9,6 +9,38 @@ function averageRange(values, start, end) {
   return total / (safeEnd - safeStart) / 255;
 }
 
+function rmsRange(values, start, end) {
+  if (!values?.length) return 0;
+  const safeStart = Math.max(0, Math.min(values.length - 1, start));
+  const safeEnd = Math.max(safeStart + 1, Math.min(values.length, end));
+  let total = 0;
+  for (let index = safeStart; index < safeEnd; index += 1) {
+    const value = values[index] / 255;
+    total += value * value;
+  }
+  return Math.sqrt(total / (safeEnd - safeStart));
+}
+
+function peakRange(values, start, end) {
+  if (!values?.length) return 0;
+  const safeStart = Math.max(0, Math.min(values.length - 1, start));
+  const safeEnd = Math.max(safeStart + 1, Math.min(values.length, end));
+  let peak = 0;
+  for (let index = safeStart; index < safeEnd; index += 1) peak = Math.max(peak, values[index] / 255);
+  return peak;
+}
+
+function bandSignal(values, start, end) {
+  return averageRange(values, start, end) * 0.56
+    + rmsRange(values, start, end) * 0.29
+    + peakRange(values, start, end) * 0.15;
+}
+
+function normalizeBand(value, floor, ceiling, curve = 0.9) {
+  const normalized = Math.max(0, Math.min(1, (value - floor) / (ceiling - floor)));
+  return Math.pow(normalized, curve);
+}
+
 function shapeBand(value, exponent, gain) {
   return Math.min(1, Math.pow(Math.max(0, value), exponent) * gain);
 }
@@ -86,11 +118,17 @@ export class ColdflameVisualizer {
     this.intensity = 1.72;
     this.audioEnergy = 0;
     this.audioFlux = 0;
+    this.bandMotion = 0;
     this.previousTargetEnergy = 0;
+    this.previousBandTargets = [0, 0, 0];
+    this.bandBaselines = [0, 0, 0];
+    this.bandBaselinesReady = false;
     this.fastEnergy = 0;
     this.slowEnergy = 0;
     this.palettePhase = 0;
     this.paletteTravel = 0;
+    this.paletteVelocity = 0;
+    this.isPlaying = false;
     this.cornerSweep = null;
     this.cornerSweepCount = 0;
     this.cornerDropCount = 0;
@@ -129,8 +167,10 @@ export class ColdflameVisualizer {
         if (audioContext.state === "suspended") await audioContext.resume();
         const source = audioContext.createMediaElementSource(this.audio);
         const analyser = audioContext.createAnalyser();
-        analyser.fftSize = 256;
-        analyser.smoothingTimeConstant = 0.82;
+        analyser.fftSize = 512;
+        analyser.smoothingTimeConstant = 0.58;
+        analyser.minDecibels = -100;
+        analyser.maxDecibels = -6;
         source.connect(analyser);
         analyser.connect(audioContext.destination);
 
@@ -155,6 +195,7 @@ export class ColdflameVisualizer {
   setTrack(index, count = 7) {
     this.trackIndex = index;
     this.trackCount = count;
+    this.bandBaselinesReady = false;
     if (this.nodePulseOrder.length !== count) this.resetNodePulseOrder();
   }
 
@@ -215,8 +256,11 @@ export class ColdflameVisualizer {
     if (!playing) return;
     if (!this.nodePulseOrder.length) this.resetNodePulseOrder();
     if (!this.nextNodePulseAt) this.nextNodePulseAt = time + 420;
-    const onset = this.audioFlux > 0.045 && time - this.lastNodePulseAt > 850;
-    if (time >= this.nextNodePulseAt || onset) this.triggerNodePulse(time);
+    const onset = this.audioFlux > 0.032 && time - this.lastNodePulseAt > 760;
+    const sustainedAccent = time >= this.nextNodePulseAt
+      && this.audioEnergy > 0.14
+      && (this.bandMotion > 0.006 || this.audioFlux > 0.012);
+    if (onset || sustainedAccent) this.triggerNodePulse(time);
   }
 
   resize() {
@@ -276,43 +320,66 @@ export class ColdflameVisualizer {
     this.stage.style.setProperty("--corner-glow", `${(flare * 9).toFixed(2)}px`);
     this.stage.style.setProperty("--corner-scale", (1 + flare * 0.018).toFixed(4));
     this.stage.style.setProperty("--corner-opacity", (0.82 + flare * 0.18).toFixed(3));
+    this.stage.style.setProperty("--corner-width", `${(1.6 + flare * 1.35).toFixed(2)}px`);
     this.stage.style.setProperty("--corner-color", colorAt(this.getPaletteColors(), this.palettePhase + 0.64));
   }
 
   readAudio(time) {
     const playing = !this.audio.paused && !this.audio.ended;
-    let targetBass = 0.025;
-    let targetMids = 0.02;
-    let targetTreble = 0.015;
+    this.isPlaying = playing;
+    let targetBass = 0;
+    let targetMids = 0;
+    let targetTreble = 0;
 
     if (playing && this.analyser && this.frequencyData) {
       this.analyser.getByteFrequencyData(this.frequencyData);
-      targetBass = shapeBand(averageRange(this.frequencyData, 1, 10), 0.68, 1.18);
-      targetMids = shapeBand(averageRange(this.frequencyData, 10, 42), 0.72, 1.1);
-      targetTreble = shapeBand(averageRange(this.frequencyData, 42, 104), 0.7, 1.16);
-    } else if (!this.reducedMotion) {
-      targetBass += (Math.sin(time * 0.00052) + 1) * 0.015;
-      targetMids += (Math.sin(time * 0.00037 + 1.8) + 1) * 0.01;
-      targetTreble += (Math.sin(time * 0.00081 + 4.1) + 1) * 0.006;
+      const intensityGain = 1 + Math.max(0, this.intensity - 1) * 0.08;
+      targetBass = Math.min(1, normalizeBand(bandSignal(this.frequencyData, 1, 6), 0.28, 0.98, 1.1) * intensityGain);
+      targetMids = Math.min(1, normalizeBand(bandSignal(this.frequencyData, 6, 31), 0.16, 0.88, 1.08) * intensityGain);
+      targetTreble = Math.min(1, normalizeBand(bandSignal(this.frequencyData, 31, 106), 0.07, 0.78, 1.02) * intensityGain);
     }
 
     const targetEnergy = targetBass * 0.46 + targetMids * 0.34 + targetTreble * 0.2;
-    const targetFlux = Math.max(0, targetEnergy - this.previousTargetEnergy);
+    const positiveBandFlux = Math.max(0, targetBass - this.previousBandTargets[0]) * 0.46
+      + Math.max(0, targetMids - this.previousBandTargets[1]) * 0.34
+      + Math.max(0, targetTreble - this.previousBandTargets[2]) * 0.2;
+    const targetFlux = Math.max(0, targetEnergy - this.previousTargetEnergy) + positiveBandFlux * 0.72;
+    this.bandMotion = Math.abs(targetBass - this.previousBandTargets[0]) * 0.46
+      + Math.abs(targetMids - this.previousBandTargets[1]) * 0.34
+      + Math.abs(targetTreble - this.previousBandTargets[2]) * 0.2;
     this.previousTargetEnergy = targetEnergy;
-    this.audioFlux += (targetFlux - this.audioFlux) * 0.32;
-    this.fastEnergy += (targetEnergy - this.fastEnergy) * 0.24;
-    this.slowEnergy += (targetEnergy - this.slowEnergy) * 0.032;
+    this.previousBandTargets = [targetBass, targetMids, targetTreble];
+    this.audioFlux += (targetFlux - this.audioFlux) * 0.44;
+    this.fastEnergy += (targetEnergy - this.fastEnergy) * 0.32;
+    this.slowEnergy += (targetEnergy - this.slowEnergy) * 0.028;
 
-    this.bass = followBand(this.bass, Math.min(1, targetBass), 0.22, 0.085);
-    this.mids = followBand(this.mids, Math.min(1, targetMids), 0.2, 0.1);
-    this.treble = followBand(this.treble, Math.min(1, targetTreble), 0.26, 0.14);
+    let responsiveBass = 0;
+    let responsiveMids = 0;
+    let responsiveTreble = 0;
+    if (playing) {
+      if (!this.bandBaselinesReady && targetEnergy > 0.02) {
+        this.bandBaselines = [targetBass, targetMids, targetTreble];
+        this.bandBaselinesReady = true;
+      }
+      responsiveBass = Math.min(1, targetBass * 0.74 + Math.max(0, targetBass - this.bandBaselines[0]) * 1.9);
+      responsiveMids = Math.min(1, targetMids * 0.74 + Math.max(0, targetMids - this.bandBaselines[1]) * 1.7);
+      responsiveTreble = Math.min(1, targetTreble * 0.72 + Math.max(0, targetTreble - this.bandBaselines[2]) * 1.5);
+      this.bandBaselines = [
+        followBand(this.bandBaselines[0], targetBass, 0.012, 0.02),
+        followBand(this.bandBaselines[1], targetMids, 0.012, 0.02),
+        followBand(this.bandBaselines[2], targetTreble, 0.014, 0.024)
+      ];
+    }
+    this.bass = followBand(this.bass, responsiveBass, 0.36, 0.13);
+    this.mids = followBand(this.mids, responsiveMids, 0.34, 0.145);
+    this.treble = followBand(this.treble, responsiveTreble, 0.42, 0.18);
 
-    const rawBass = Math.min(1, this.bass * this.intensity);
-    const rawMids = Math.min(1, this.mids * this.intensity);
-    const rawTreble = Math.min(1, this.treble * this.intensity);
-    const visualBass = shapeBand(rawBass, 0.82, 1.65);
-    const visualMids = shapeBand(rawMids, 0.8, 1.7);
-    const visualTreble = shapeBand(rawTreble, 0.78, 1.72);
+    const rawBass = Math.min(1, this.bass);
+    const rawMids = Math.min(1, this.mids);
+    const rawTreble = Math.min(1, this.treble);
+    const visualBass = shapeBand(rawBass, 0.9, 1);
+    const visualMids = shapeBand(rawMids, 0.88, 1);
+    const visualTreble = shapeBand(rawTreble, 0.86, 1);
     this.visualBass = visualBass;
     this.visualMids = visualMids;
     this.visualTreble = visualTreble;
@@ -331,11 +398,12 @@ export class ColdflameVisualizer {
       && (this.audioFlux > 0.006 || this.audioEnergy > 0.13);
     if (dropReady) this.triggerCornerSweep(time, "drop", 0.58 + dropContrast * 0.7);
     else if (accentReady) this.triggerCornerSweep(time, "accent", 0.58 + this.audioEnergy * 0.45);
-    const paletteSpeed = playing
-      ? 0.12 + this.rawEnergy * 0.42 + this.audioFlux * 0.85
-      : 0.02;
+    const targetPaletteVelocity = playing
+      ? 0.008 + this.rawEnergy * 0.055 + this.bandMotion * 3.2 + this.audioFlux * 4.2
+      : 0.006;
+    this.paletteVelocity = followBand(this.paletteVelocity, targetPaletteVelocity, 0.34, 0.075);
     const motionScale = this.reducedMotion ? 0.3 : 1;
-    this.paletteTravel += elapsed * paletteSpeed * motionScale;
+    this.paletteTravel += elapsed * this.paletteVelocity * motionScale;
     this.palettePhase = this.paletteTravel % 1;
     this.stage.style.setProperty("--bass", visualBass.toFixed(3));
     this.stage.style.setProperty("--mids", visualMids.toFixed(3));
@@ -343,14 +411,19 @@ export class ColdflameVisualizer {
     this.stage.style.setProperty("--palette-phase", this.palettePhase.toFixed(4));
     this.stage.style.setProperty("--palette-travel", this.paletteTravel.toFixed(4));
     this.stage.style.setProperty("--drop-contrast", dropContrast.toFixed(3));
+    this.stage.dataset.bass = visualBass.toFixed(3);
+    this.stage.dataset.mids = visualMids.toFixed(3);
+    this.stage.dataset.treble = visualTreble.toFixed(3);
+    this.stage.dataset.audioFlux = this.audioFlux.toFixed(4);
+    this.stage.dataset.paletteVelocity = this.paletteVelocity.toFixed(4);
     const progress = this.audio.duration ? this.audio.currentTime / this.audio.duration : 0;
     this.stage.style.setProperty("--progress", progress.toFixed(4));
     this.updateCornerSweep(time);
 
     if (this.frame % 3 === 0) {
-      this.meters.bass.style.width = `${Math.max(8, visualBass * 100)}%`;
-      this.meters.mids.style.width = `${Math.max(8, visualMids * 100)}%`;
-      this.meters.treble.style.width = `${Math.max(8, visualTreble * 100)}%`;
+      this.meters.bass.style.width = `${Math.max(3, visualBass * 100)}%`;
+      this.meters.mids.style.width = `${Math.max(3, visualMids * 100)}%`;
+      this.meters.treble.style.width = `${Math.max(3, visualTreble * 100)}%`;
     }
   }
 
@@ -368,7 +441,7 @@ export class ColdflameVisualizer {
     const coverRadius = Math.min(smallest * 0.245, 205);
     const orbitRadiusX = Math.min(this.width * 0.41, coverRadius * 1.86);
     const orbitRadiusY = Math.min(this.height * 0.39, coverRadius * 1.67);
-    const breath = this.reducedMotion ? 0 : Math.sin(time * 0.00038) * 2.5;
+    const breath = this.reducedMotion || this.isPlaying ? 0 : Math.sin(time * 0.00038) * 1.4;
     const bassDepth = this.visualBass * Math.min(54, smallest * 0.07);
     const midBody = this.visualMids * Math.min(34, smallest * 0.048);
     const trebleLight = Math.min(1, this.visualTreble * 1.35);
@@ -386,10 +459,11 @@ export class ColdflameVisualizer {
     const bass = this.visualBass;
     const mids = this.visualMids;
     const treble = this.visualTreble;
-    const punch = Math.min(0.11, this.audioFlux * 1.3);
-    const fieldScale = 1.18 + bass * 0.26 + mids * 0.11 + punch;
+    const punch = Math.min(0.04, this.audioFlux * 0.9);
+    const fieldScale = Math.min(1.33, 1.1 + bass * 0.15 + mids * 0.08 + punch);
     this.stage.style.setProperty("--field-scale", fieldScale.toFixed(4));
     this.stage.style.setProperty("--field-rotation", "0");
+    this.stage.dataset.fieldScale = fieldScale.toFixed(4);
     const baseRadius = coverRadius * fieldScale;
     const rotation = -Math.PI / 2;
     const vertices = [];
@@ -401,9 +475,9 @@ export class ColdflameVisualizer {
         : 0;
       const band = index % 3 === 0 ? bass : index % 3 === 1 ? mids : treble;
       const radius = baseRadius + coverRadius * (
-        bin * 0.08 * this.intensity
-        + band * 0.07
-        + punch * 0.12
+        bin * 0.055
+        + band * 0.05
+        + punch * 0.14
       );
       vertices.push({
         x: centerX + Math.cos(angle) * radius,
@@ -648,7 +722,9 @@ export class ColdflameVisualizer {
   drawCornerSignals(ctx, trebleLight, time) {
     if (trebleLight < 0.05) return;
     const padding = 28;
-    const pulse = this.reducedMotion ? 1 : 0.72 + Math.sin(time * 0.004) * 0.2;
+    const pulse = this.reducedMotion
+      ? 1
+      : Math.min(1, 0.5 + trebleLight * 0.28 + this.audioFlux * 2.4);
     const length = 13 + trebleLight * 10;
     const corners = [
       [padding, padding, 1, 1],

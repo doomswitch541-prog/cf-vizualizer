@@ -375,10 +375,33 @@ a {
 }
 
 .rail-foot {
-  display: flex;
+  display: grid;
   margin-top: auto;
   padding: 18px 18px 0 0;
+  gap: 14px;
+}
+
+.rail-context,
+.rail-links {
+  display: flex;
   justify-content: space-between;
+}
+
+.rail-links {
+  align-items: center;
+  gap: 12px;
+}
+
+.rail-links a {
+  min-height: 32px;
+  color: var(--muted);
+  text-decoration: none;
+  transition: color 180ms ease;
+}
+
+.rail-links a:hover,
+.rail-links a:focus-visible {
+  color: var(--ink);
 }
 
 .visual-stage {
@@ -475,13 +498,13 @@ a {
 .cover-border-orbit i:first-child {
   top: 0;
   left: 0;
-  border-width: 1px 0 0 1px;
+  border-width: var(--corner-width, 1.6px) 0 0 var(--corner-width, 1.6px);
 }
 
 .cover-border-orbit i:last-child {
   right: 0;
   bottom: 0;
-  border-width: 0 1px 1px 0;
+  border-width: 0 var(--corner-width, 1.6px) var(--corner-width, 1.6px) 0;
 }
 
 #stage-cover {
@@ -1139,11 +1162,15 @@ html[data-ready="true"] .site-footer {
   .catalog-rail {
     position: fixed;
     z-index: 32;
+    display: grid;
     top: 0;
-    bottom: 0;
+    bottom: auto;
     left: 0;
     width: min(370px, calc(100vw - 44px));
+    height: 100dvh;
+    max-height: 100dvh;
     padding: max(24px, env(safe-area-inset-top)) 0 max(24px, env(safe-area-inset-bottom)) max(20px, env(safe-area-inset-left));
+    grid-template-rows: auto minmax(0, 1fr) auto;
     border-right-color: var(--hairline);
     background: color-mix(in srgb, var(--bg) 91%, var(--surface));
     box-shadow: 30px 0 90px rgba(0, 0, 0, 0.6);
@@ -1153,11 +1180,11 @@ html[data-ready="true"] .site-footer {
   }
 
   .catalog-rail .rail-heading {
-    position: sticky;
+    position: relative;
     z-index: 2;
-    top: calc(-1 * max(24px, env(safe-area-inset-top)));
+    top: auto;
     min-height: 58px;
-    padding-top: max(20px, env(safe-area-inset-top));
+    padding-top: 0;
     align-items: center;
     background: color-mix(in srgb, var(--bg) 94%, var(--surface));
   }
@@ -1165,11 +1192,23 @@ html[data-ready="true"] .site-footer {
   .catalog-rail .track-list {
     flex: 1;
     min-height: 0;
-    max-height: 100%;
     overflow-y: auto;
     overscroll-behavior: contain;
+    scrollbar-gutter: stable;
     touch-action: pan-y;
     -webkit-overflow-scrolling: touch;
+  }
+
+  .catalog-rail .rail-foot {
+    margin-top: 0;
+    padding-top: 14px;
+    border-top: 1px solid var(--faint);
+  }
+
+  .catalog-rail .rail-links a {
+    display: inline-flex;
+    min-height: 44px;
+    align-items: center;
   }
 
   .queue-close {
