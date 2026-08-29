@@ -22,8 +22,8 @@
   <meta name="twitter:image" content="https://doomswitch541-prog.github.io/cf-vizualizer/assets/share/coldflame-archive-card.png">
   <title>Coldflame — Release Archive</title>
   <link rel="icon" href="assets/coldflame/artwork-web/2024-break-me-down.jpg">
-  <link rel="stylesheet" href="styles.css?v=20260828-2">
-  <script type="module" src="app.js?v=20260828-2"></script>
+  <link rel="stylesheet" href="styles.css?v=20260828-3">
+  <script type="module" src="app.js?v=20260828-3"></script>
 </head>
 <body>
   <div class="art-wash" id="art-wash" aria-hidden="true"></div>
@@ -54,7 +54,7 @@
   </header>
 
   <main class="experience" id="experience">
-    <nav class="catalog-rail" aria-label="Coldflame tracks">
+    <nav class="catalog-rail" id="catalog-rail" aria-label="Coldflame tracks">
       <div class="rail-heading">
         <span>Release chronology</span>
         <button class="queue-close" id="queue-close" type="button" aria-label="Close track list">Close</button>
@@ -65,6 +65,8 @@
         <span>2021—2025</span>
       </div>
     </nav>
+
+    <button class="queue-backdrop" id="queue-backdrop" type="button" tabindex="-1" aria-label="Close track list"></button>
 
     <section class="visual-stage" id="visual-stage" aria-label="Audio-reactive artwork">
       <canvas id="visualizer-canvas" aria-hidden="true"></canvas>
@@ -92,7 +94,7 @@
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4H4v5M15 4h5v5M20 15v5h-5M9 20H4v-5"/></svg>
       </button>
 
-      <button class="stage-action queue-button" id="queue-button" type="button" aria-label="Open track list">
+      <button class="stage-action queue-button" id="queue-button" type="button" aria-label="Open track list" aria-controls="catalog-rail" aria-expanded="false">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7h14M5 12h14M5 17h9"/></svg>
       </button>
 
@@ -147,6 +149,13 @@
           <span id="release-count">Release 01 / 05</span>
         </div>
         <div class="palette-swatches" id="palette-swatches" aria-label="Active artwork palette"></div>
+        <div class="visual-intensity">
+          <span>Visual intensity</span>
+          <div class="intensity-options" role="group" aria-label="Visual intensity">
+            <button type="button" data-intensity="standard" aria-pressed="false">Standard</button>
+            <button type="button" data-intensity="high" aria-pressed="true">High</button>
+          </div>
+        </div>
       </div>
 
       <div class="source-row">

@@ -52,7 +52,7 @@ export class ColdflameVisualizer {
     this.bass = 0;
     this.mids = 0;
     this.treble = 0;
-    this.energyBoost = 0;
+    this.intensity = 1.72;
     this.frame = 0;
     this.audioContext = null;
     this.analyser = null;
@@ -62,7 +62,6 @@ export class ColdflameVisualizer {
     this.resizeObserver = new ResizeObserver(() => this.resize());
     this.resizeObserver.observe(stage);
     this.resize();
-    this.bindEnergyLens();
     this.tick = this.tick.bind(this);
     requestAnimationFrame(this.tick);
   }
@@ -105,6 +104,10 @@ export class ColdflameVisualizer {
     this.trackCount = count;
   }
 
+  setIntensity(value) {
+    this.intensity = Math.max(0.8, Math.min(2, Number(value) || 1));
+  }
+
   resize() {
     const bounds = this.stage.getBoundingClientRect();
     const ratio = Math.min(window.devicePixelRatio || 1, 2);
@@ -119,21 +122,6 @@ export class ColdflameVisualizer {
     this.pixelRatio = ratio;
     this.width = bounds.width;
     this.height = bounds.height;
-  }
-
-  bindEnergyLens() {
-    const increase = (event) => {
-      if (event.pointerType === "mouse" && event.button !== 0) return;
-      this.energyBoost = 1;
-      this.stage.setPointerCapture?.(event.pointerId);
-    };
-    const release = () => {
-      this.energyBoost = 0;
-    };
-    this.stage.addEventListener("pointerdown", increase);
-    this.stage.addEventListener("pointerup", release);
-    this.stage.addEventListener("pointercancel", release);
-    this.stage.addEventListener("lostpointercapture", release);
   }
 
   readAudio(time) {
@@ -153,21 +141,23 @@ export class ColdflameVisualizer {
       targetTreble += (Math.sin(time * 0.00081 + 4.1) + 1) * 0.006;
     }
 
-    const boost = this.energyBoost * 0.2;
-    this.bass += (Math.min(1, targetBass + boost) - this.bass) * 0.12;
-    this.mids += (Math.min(1, targetMids + boost * 0.72) - this.mids) * 0.13;
-    this.treble += (Math.min(1, targetTreble + boost * 0.45) - this.treble) * 0.16;
+    this.bass += (Math.min(1, targetBass) - this.bass) * 0.12;
+    this.mids += (Math.min(1, targetMids) - this.mids) * 0.13;
+    this.treble += (Math.min(1, targetTreble) - this.treble) * 0.16;
 
-    this.stage.style.setProperty("--bass", this.bass.toFixed(3));
-    this.stage.style.setProperty("--mids", this.mids.toFixed(3));
-    this.stage.style.setProperty("--treble", this.treble.toFixed(3));
+    const visualBass = Math.min(1, this.bass * this.intensity);
+    const visualMids = Math.min(1, this.mids * this.intensity);
+    const visualTreble = Math.min(1, this.treble * this.intensity);
+    this.stage.style.setProperty("--bass", visualBass.toFixed(3));
+    this.stage.style.setProperty("--mids", visualMids.toFixed(3));
+    this.stage.style.setProperty("--treble", visualTreble.toFixed(3));
     const progress = this.audio.duration ? this.audio.currentTime / this.audio.duration : 0;
     this.stage.style.setProperty("--progress", progress.toFixed(4));
 
     if (this.frame % 3 === 0) {
-      this.meters.bass.style.width = `${Math.max(8, this.bass * 100)}%`;
-      this.meters.mids.style.width = `${Math.max(8, this.mids * 100)}%`;
-      this.meters.treble.style.width = `${Math.max(8, this.treble * 100)}%`;
+      this.meters.bass.style.width = `${Math.max(8, visualBass * 100)}%`;
+      this.meters.mids.style.width = `${Math.max(8, visualMids * 100)}%`;
+      this.meters.treble.style.width = `${Math.max(8, visualTreble * 100)}%`;
     }
   }
 
@@ -186,9 +176,9 @@ export class ColdflameVisualizer {
     const orbitRadiusX = Math.min(this.width * 0.41, coverRadius * 1.86);
     const orbitRadiusY = Math.min(this.height * 0.39, coverRadius * 1.67);
     const breath = this.reducedMotion ? 0 : Math.sin(time * 0.00038) * 2.5;
-    const bassDepth = this.bass * Math.min(42, smallest * 0.055);
-    const midBody = this.mids * Math.min(26, smallest * 0.038);
-    const trebleLight = Math.min(1, this.treble * 1.65);
+    const bassDepth = Math.min(1, this.bass * this.intensity) * Math.min(54, smallest * 0.07);
+    const midBody = Math.min(1, this.mids * this.intensity) * Math.min(34, smallest * 0.048);
+    const trebleLight = Math.min(1, this.treble * this.intensity * 1.8);
 
     this.drawColorField(ctx, centerX, centerY, coverRadius, time);
     this.drawOuterHalo(ctx, centerX, centerY, orbitRadiusX, orbitRadiusY, breath, bassDepth);
@@ -200,7 +190,10 @@ export class ColdflameVisualizer {
 
   drawColorField(ctx, centerX, centerY, coverRadius, time) {
     const sides = 6;
-    const baseRadius = coverRadius * (1.34 + this.bass * 0.2);
+    const bass = Math.min(1, this.bass * this.intensity);
+    const mids = Math.min(1, this.mids * this.intensity);
+    const treble = Math.min(1, this.treble * this.intensity);
+    const baseRadius = coverRadius * (1.58 + bass * 0.3);
     const rotation = -Math.PI / 2 + (this.reducedMotion ? 0 : Math.sin(time * 0.00019) * 0.025);
     const vertices = [];
 
@@ -209,13 +202,38 @@ export class ColdflameVisualizer {
       const bin = this.frequencyData?.length
         ? this.frequencyData[Math.min(this.frequencyData.length - 1, 3 + index * 14)] / 255
         : 0;
-      const band = index % 3 === 0 ? this.bass : index % 3 === 1 ? this.mids : this.treble;
-      const radius = baseRadius + coverRadius * (bin * 0.12 + band * 0.13);
+      const band = index % 3 === 0 ? bass : index % 3 === 1 ? mids : treble;
+      const radius = baseRadius + coverRadius * (bin * 0.18 * this.intensity + band * 0.18);
       vertices.push({
         x: centerX + Math.cos(angle) * radius,
         y: centerY + Math.sin(angle) * radius
       });
     }
+
+    const fieldRadius = coverRadius * (2.25 + bass * 0.55);
+    const highPresence = Math.max(0, this.intensity - 1) * 0.13;
+    const fields = [
+      { color: this.palette.primary, angle: -Math.PI * 0.76, energy: bass },
+      { color: this.palette.secondary, angle: -Math.PI * 0.18, energy: mids },
+      { color: this.palette.accent, angle: Math.PI * 0.34, energy: treble },
+      { color: this.palette.highlight, angle: Math.PI * 0.82, energy: (mids + treble) * 0.5 }
+    ];
+
+    ctx.save();
+    ctx.globalCompositeOperation = "lighter";
+    ctx.filter = `saturate(${1.12 + this.intensity * 0.22})`;
+    fields.forEach((field) => {
+      const travel = coverRadius * (0.56 + field.energy * 0.38);
+      const x = centerX + Math.cos(field.angle) * travel;
+      const y = centerY + Math.sin(field.angle) * travel;
+      const gradient = ctx.createRadialGradient(x, y, 0, x, y, fieldRadius);
+      gradient.addColorStop(0, rgba(field.color, 0.13 + highPresence + field.energy * 0.46));
+      gradient.addColorStop(0.34, rgba(field.color, 0.075 + highPresence * 0.62 + field.energy * 0.28));
+      gradient.addColorStop(1, rgba(field.color, 0));
+      ctx.fillStyle = gradient;
+      ctx.fillRect(centerX - fieldRadius, centerY - fieldRadius, fieldRadius * 2, fieldRadius * 2);
+    });
+    ctx.restore();
 
     ctx.save();
     ctx.beginPath();
@@ -226,21 +244,15 @@ export class ColdflameVisualizer {
     ctx.closePath();
     ctx.clip();
     ctx.globalCompositeOperation = "lighter";
-
-    const fieldRadius = coverRadius * (1.95 + this.bass * 0.3);
-    const fields = [
-      { color: this.palette.primary, angle: -Math.PI * 0.72, energy: this.bass },
-      { color: this.palette.secondary, angle: -Math.PI * 0.04, energy: this.mids },
-      { color: this.palette.accent, angle: Math.PI * 0.64, energy: this.treble }
-    ];
+    ctx.filter = `saturate(${1.18 + this.intensity * 0.26})`;
 
     fields.forEach((field) => {
-      const travel = coverRadius * (0.22 + field.energy * 0.28);
+      const travel = coverRadius * (0.28 + field.energy * 0.36);
       const x = centerX + Math.cos(field.angle) * travel;
       const y = centerY + Math.sin(field.angle) * travel;
       const gradient = ctx.createRadialGradient(x, y, 0, x, y, fieldRadius);
-      gradient.addColorStop(0, rgba(field.color, 0.22 + field.energy * 0.34));
-      gradient.addColorStop(0.42, rgba(field.color, 0.08 + field.energy * 0.18));
+      gradient.addColorStop(0, rgba(field.color, 0.34 + highPresence + field.energy * 0.44));
+      gradient.addColorStop(0.46, rgba(field.color, 0.14 + highPresence * 0.72 + field.energy * 0.3));
       gradient.addColorStop(1, rgba(field.color, 0));
       ctx.fillStyle = gradient;
       ctx.fillRect(centerX - fieldRadius, centerY - fieldRadius, fieldRadius * 2, fieldRadius * 2);
@@ -255,10 +267,10 @@ export class ColdflameVisualizer {
       else ctx.lineTo(point.x, point.y);
     });
     ctx.closePath();
-    ctx.strokeStyle = rgba(this.palette.highlight, 0.14 + this.mids * 0.34);
-    ctx.lineWidth = 0.8 + this.mids * 1.4;
-    ctx.shadowColor = rgba(this.palette.secondary, 0.55 + this.bass * 0.25);
-    ctx.shadowBlur = 12 + this.bass * 34;
+    ctx.strokeStyle = rgba(this.palette.highlight, 0.18 + mids * 0.46);
+    ctx.lineWidth = 0.9 + mids * 1.8;
+    ctx.shadowColor = rgba(this.palette.secondary, 0.62 + bass * 0.28);
+    ctx.shadowBlur = 16 + bass * 42;
     ctx.stroke();
     ctx.restore();
   }

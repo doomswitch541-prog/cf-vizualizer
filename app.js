@@ -1,4 +1,4 @@
-import { ColdflameVisualizer } from "./visualizer.js?v=20260828-2";
+import { ColdflameVisualizer } from "./visualizer.js?v=20260828-3";
 
 const elements = {
   audio: document.querySelector("#audio"),
@@ -9,6 +9,7 @@ const elements = {
   releaseYear: document.querySelector("#release-year"),
   releaseName: document.querySelector("#release-name"),
   trackList: document.querySelector("#track-list"),
+  catalogRail: document.querySelector("#catalog-rail"),
   trackTitle: document.querySelector("#track-title"),
   nowRelease: document.querySelector("#now-release"),
   playbackStatus: document.querySelector("#playback-status"),
@@ -28,6 +29,8 @@ const elements = {
   shareButton: document.querySelector("#share-button"),
   queueButton: document.querySelector("#queue-button"),
   queueClose: document.querySelector("#queue-close"),
+  queueBackdrop: document.querySelector("#queue-backdrop"),
+  intensityButtons: [...document.querySelectorAll("[data-intensity]")],
   fullscreenButton: document.querySelector("#fullscreen-button"),
   toast: document.querySelector("#toast"),
   themeColor: document.querySelector('meta[name="theme-color"]'),
@@ -43,6 +46,7 @@ const state = {
   isSeeking: false,
   wasPlayingBeforeSeek: false,
   lastVolume: 0.82,
+  visualIntensity: "high",
   toastTimer: null
 };
 
@@ -82,6 +86,36 @@ function showToast(message) {
 
 function setStatus(message) {
   elements.playbackStatus.textContent = message;
+}
+
+function setVisualIntensity(mode, { persist = true } = {}) {
+  const normalized = mode === "standard" ? "standard" : "high";
+  state.visualIntensity = normalized;
+  visualizer.setIntensity(normalized === "high" ? 1.72 : 1);
+  elements.intensityButtons.forEach((button) => {
+    button.setAttribute("aria-pressed", String(button.dataset.intensity === normalized));
+  });
+
+  if (persist) {
+    try {
+      localStorage.setItem("coldflame-visual-intensity", normalized);
+    } catch {
+      // The preference is optional; the visualizer still defaults to High.
+    }
+  }
+}
+
+function setQueueOpen(open, { restoreFocus = false } = {}) {
+  const expanded = Boolean(open);
+  document.body.dataset.queueOpen = String(expanded);
+  elements.queueButton.setAttribute("aria-expanded", String(expanded));
+  elements.catalogRail.setAttribute("aria-hidden", String(!expanded && window.innerWidth <= 900));
+
+  if (expanded) {
+    requestAnimationFrame(() => elements.queueClose.focus({ preventScroll: true }));
+  } else if (restoreFocus) {
+    elements.queueButton.focus({ preventScroll: true });
+  }
 }
 
 function applyPalette(release) {
@@ -185,7 +219,7 @@ async function selectTrack(index, { autoplay = false, updateHistory = true } = {
     setStatus("Loading archive audio");
   }
 
-  if (window.innerWidth <= 900) document.body.dataset.queueOpen = "false";
+  if (window.innerWidth <= 900) setQueueOpen(false);
 
   if (autoplay) {
     try {
@@ -346,8 +380,15 @@ function bindEvents() {
   elements.shareButton.addEventListener("click", shareCurrentTrack);
   elements.fullscreenButton.addEventListener("click", toggleFullscreen);
   elements.muteButton.addEventListener("click", toggleMute);
-  elements.queueButton.addEventListener("click", () => { document.body.dataset.queueOpen = "true"; });
-  elements.queueClose.addEventListener("click", () => { document.body.dataset.queueOpen = "false"; });
+  elements.queueButton.addEventListener("click", (event) => {
+    event.stopPropagation();
+    setQueueOpen(true);
+  });
+  elements.queueClose.addEventListener("click", () => setQueueOpen(false, { restoreFocus: true }));
+  elements.queueBackdrop.addEventListener("click", () => setQueueOpen(false, { restoreFocus: true }));
+  elements.intensityButtons.forEach((button) => {
+    button.addEventListener("click", () => setVisualIntensity(button.dataset.intensity));
+  });
   elements.seek.addEventListener("pointerdown", () => {
     state.isSeeking = true;
     state.wasPlayingBeforeSeek = !elements.audio.paused;
@@ -415,6 +456,18 @@ function bindEvents() {
       toggleMute();
     } else if (event.key.toLowerCase() === "f" && !isTyping) {
       toggleFullscreen();
+    } else if (event.key === "Escape" && document.body.dataset.queueOpen === "true") {
+      setQueueOpen(false, { restoreFocus: true });
+    }
+  });
+
+  window.addEventListener("resize", () => {
+    if (window.innerWidth > 900) {
+      document.body.dataset.queueOpen = "false";
+      elements.catalogRail.removeAttribute("aria-hidden");
+      elements.queueButton.setAttribute("aria-expanded", "false");
+    } else if (document.body.dataset.queueOpen !== "true") {
+      elements.catalogRail.setAttribute("aria-hidden", "true");
     }
   });
 }
@@ -434,6 +487,14 @@ async function initialize() {
     bindEvents();
     bindMediaActions();
     setVolume(0.82);
+    let savedIntensity = "high";
+    try {
+      savedIntensity = localStorage.getItem("coldflame-visual-intensity") || "high";
+    } catch {
+      // Keep the High default when storage is unavailable.
+    }
+    setVisualIntensity(savedIntensity, { persist: false });
+    setQueueOpen(false);
     await selectTrack(state.currentIndex, { autoplay: false, updateHistory: requestedIndex >= 0 });
 
     document.documentElement.dataset.ready = "true";
