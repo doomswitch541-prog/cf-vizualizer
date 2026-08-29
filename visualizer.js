@@ -71,14 +71,25 @@ export class ColdflameVisualizer {
     if (!this.audioContext) {
       const AudioContext = window.AudioContext || window.webkitAudioContext;
       if (!AudioContext) return false;
-      this.audioContext = new AudioContext();
-      this.source = this.audioContext.createMediaElementSource(this.audio);
-      this.analyser = this.audioContext.createAnalyser();
-      this.analyser.fftSize = 256;
-      this.analyser.smoothingTimeConstant = 0.82;
-      this.frequencyData = new Uint8Array(this.analyser.frequencyBinCount);
-      this.source.connect(this.analyser);
-      this.analyser.connect(this.audioContext.destination);
+      const audioContext = new AudioContext();
+
+      try {
+        if (audioContext.state === "suspended") await audioContext.resume();
+        const source = audioContext.createMediaElementSource(this.audio);
+        const analyser = audioContext.createAnalyser();
+        analyser.fftSize = 256;
+        analyser.smoothingTimeConstant = 0.82;
+        source.connect(analyser);
+        analyser.connect(audioContext.destination);
+
+        this.audioContext = audioContext;
+        this.source = source;
+        this.analyser = analyser;
+        this.frequencyData = new Uint8Array(analyser.frequencyBinCount);
+      } catch (error) {
+        await audioContext.close().catch(() => {});
+        throw error;
+      }
     }
 
     if (this.audioContext.state === "suspended") await this.audioContext.resume();
@@ -179,11 +190,77 @@ export class ColdflameVisualizer {
     const midBody = this.mids * Math.min(26, smallest * 0.038);
     const trebleLight = Math.min(1, this.treble * 1.65);
 
+    this.drawColorField(ctx, centerX, centerY, coverRadius, time);
     this.drawOuterHalo(ctx, centerX, centerY, orbitRadiusX, orbitRadiusY, breath, bassDepth);
     this.drawArchiveOrbit(ctx, centerX, centerY, orbitRadiusX, orbitRadiusY, trebleLight);
     this.drawSpectrumBody(ctx, centerX, centerY, coverRadius, midBody, time);
     this.drawProgressArc(ctx, centerX, centerY, coverRadius);
     this.drawCornerSignals(ctx, trebleLight, time);
+  }
+
+  drawColorField(ctx, centerX, centerY, coverRadius, time) {
+    const sides = 6;
+    const baseRadius = coverRadius * (1.34 + this.bass * 0.2);
+    const rotation = -Math.PI / 2 + (this.reducedMotion ? 0 : Math.sin(time * 0.00019) * 0.025);
+    const vertices = [];
+
+    for (let index = 0; index < sides; index += 1) {
+      const angle = rotation + (index / sides) * TAU;
+      const bin = this.frequencyData?.length
+        ? this.frequencyData[Math.min(this.frequencyData.length - 1, 3 + index * 14)] / 255
+        : 0;
+      const band = index % 3 === 0 ? this.bass : index % 3 === 1 ? this.mids : this.treble;
+      const radius = baseRadius + coverRadius * (bin * 0.12 + band * 0.13);
+      vertices.push({
+        x: centerX + Math.cos(angle) * radius,
+        y: centerY + Math.sin(angle) * radius
+      });
+    }
+
+    ctx.save();
+    ctx.beginPath();
+    vertices.forEach((point, index) => {
+      if (index === 0) ctx.moveTo(point.x, point.y);
+      else ctx.lineTo(point.x, point.y);
+    });
+    ctx.closePath();
+    ctx.clip();
+    ctx.globalCompositeOperation = "lighter";
+
+    const fieldRadius = coverRadius * (1.95 + this.bass * 0.3);
+    const fields = [
+      { color: this.palette.primary, angle: -Math.PI * 0.72, energy: this.bass },
+      { color: this.palette.secondary, angle: -Math.PI * 0.04, energy: this.mids },
+      { color: this.palette.accent, angle: Math.PI * 0.64, energy: this.treble }
+    ];
+
+    fields.forEach((field) => {
+      const travel = coverRadius * (0.22 + field.energy * 0.28);
+      const x = centerX + Math.cos(field.angle) * travel;
+      const y = centerY + Math.sin(field.angle) * travel;
+      const gradient = ctx.createRadialGradient(x, y, 0, x, y, fieldRadius);
+      gradient.addColorStop(0, rgba(field.color, 0.22 + field.energy * 0.34));
+      gradient.addColorStop(0.42, rgba(field.color, 0.08 + field.energy * 0.18));
+      gradient.addColorStop(1, rgba(field.color, 0));
+      ctx.fillStyle = gradient;
+      ctx.fillRect(centerX - fieldRadius, centerY - fieldRadius, fieldRadius * 2, fieldRadius * 2);
+    });
+
+    ctx.restore();
+
+    ctx.save();
+    ctx.beginPath();
+    vertices.forEach((point, index) => {
+      if (index === 0) ctx.moveTo(point.x, point.y);
+      else ctx.lineTo(point.x, point.y);
+    });
+    ctx.closePath();
+    ctx.strokeStyle = rgba(this.palette.highlight, 0.14 + this.mids * 0.34);
+    ctx.lineWidth = 0.8 + this.mids * 1.4;
+    ctx.shadowColor = rgba(this.palette.secondary, 0.55 + this.bass * 0.25);
+    ctx.shadowBlur = 12 + this.bass * 34;
+    ctx.stroke();
+    ctx.restore();
   }
 
   drawOuterHalo(ctx, centerX, centerY, radiusX, radiusY, breath, bassDepth) {

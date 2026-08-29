@@ -20,10 +20,10 @@
   <meta name="twitter:title" content="Coldflame — Complete Release Archive">
   <meta name="twitter:description" content="Seven tracks. Five releases. One artwork-reactive listening room.">
   <meta name="twitter:image" content="https://doomswitch541-prog.github.io/cf-vizualizer/assets/share/coldflame-archive-card.png">
-  <title>Coldflame — Complete Release Archive</title>
+  <title>Coldflame — Release Archive</title>
   <link rel="icon" href="assets/coldflame/artwork-web/2024-break-me-down.jpg">
-  <link rel="stylesheet" href="styles.css?v=20260828-1">
-  <script type="module" src="app.js?v=20260828-1"></script>
+  <link rel="stylesheet" href="styles.css?v=20260828-2">
+  <script type="module" src="app.js?v=20260828-2"></script>
 </head>
 <body>
   <div class="art-wash" id="art-wash" aria-hidden="true"></div>
@@ -45,7 +45,7 @@
     </div>
 
     <div class="masthead-actions">
-      <button class="text-button" id="about-button" type="button">About</button>
+      <a class="text-button" href="about.html">About</a>
       <button class="share-button" id="share-button" type="button">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8.75 8.75 12 5.5l3.25 3.25M12 5.75v9.5M6.75 11.75H5.5a1.5 1.5 0 0 0-1.5 1.5v5.25A1.5 1.5 0 0 0 5.5 20h13a1.5 1.5 0 0 0 1.5-1.5v-5.25a1.5 1.5 0 0 0-1.5-1.5h-1.25"/></svg>
         <span>Share</span>
@@ -96,7 +96,7 @@
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7h14M5 12h14M5 17h9"/></svg>
       </button>
 
-      <div class="gesture-note" id="gesture-note" aria-hidden="true">Hold the field to increase energy</div>
+      <div class="gesture-note" id="gesture-note" aria-hidden="true">Artwork colors move with the song</div>
     </section>
 
     <aside class="player-panel" aria-label="Player controls">
@@ -161,20 +161,7 @@
     <p class="footer-state"><span id="audio-format">AAC / M4A</span><span aria-hidden="true">·</span><span>No tracking</span></p>
   </footer>
 
-  <audio id="audio" preload="metadata"></audio>
-
-  <dialog class="about-dialog" id="about-dialog">
-    <button class="dialog-close" id="dialog-close" type="button" aria-label="Close about panel">×</button>
-    <p class="eyebrow">The archive</p>
-    <h2>Seven songs.<br>Five visual identities.</h2>
-    <p>This listening room follows Coldflame's complete released catalog from 2021 through 2025. Each scene takes its color system from the official cover attached to the song.</p>
-    <p>The audio is analyzed in your browser after you press play. Nothing is recorded, uploaded, or tracked.</p>
-    <div class="dialog-links">
-      <a href="https://linktr.ee/coldflame" target="_blank" rel="noopener">Coldflame links ↗</a>
-      <a href="https://music.apple.com/us/artist/coldflame/1572386538" target="_blank" rel="noopener">Apple Music ↗</a>
-      <a href="https://open.spotify.com/artist/0RxsInNwfo6uf5fbWAB7O4" target="_blank" rel="noopener">Spotify ↗</a>
-    </div>
-  </dialog>
+  <audio id="audio" preload="metadata" playsinline></audio>
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
   <noscript>This archive needs JavaScript for playback and visualization.</noscript>

@@ -193,10 +193,13 @@ a {
 }
 
 .text-button {
+  display: inline-grid;
   padding: 0 14px;
+  place-items: center;
   color: var(--muted);
   font: 10px/1 var(--utility);
   letter-spacing: 0.11em;
+  text-decoration: none;
   text-transform: uppercase;
 }
 
@@ -439,7 +442,8 @@ a {
   background: color-mix(in srgb, var(--bg) 74%, transparent);
   box-shadow:
     0 32px 90px color-mix(in srgb, var(--bg) 82%, transparent),
-    0 0 52px color-mix(in srgb, var(--secondary) 18%, transparent);
+    0 0 calc(42px + var(--bass, 0) * 74px) color-mix(in srgb, var(--secondary) 30%, transparent),
+    0 0 calc(18px + var(--treble, 0) * 38px) color-mix(in srgb, var(--accent) 22%, transparent);
   transition: border-color 800ms ease, box-shadow 800ms ease;
 }
 
@@ -1269,6 +1273,141 @@ html[data-ready="true"] .site-footer {
 
   .now-playing h1 {
     font-size: 3.5rem;
+  }
+}
+
+.about-page {
+  --bg: #08090b;
+  --surface: #18181d;
+  --primary: #42362a;
+  --secondary: #7e96d2;
+  --accent: #967e66;
+  --highlight: #d7d0c8;
+  position: relative;
+  background: var(--bg);
+}
+
+.about-page-wash {
+  position: fixed;
+  z-index: -2;
+  inset: 0;
+  background:
+    linear-gradient(90deg, rgba(8, 9, 11, 0.98) 0%, rgba(8, 9, 11, 0.56) 52%, rgba(8, 9, 11, 0.92) 100%),
+    url("assets/coldflame/artwork-web/2021-lose-myself.jpg") center / cover;
+  filter: saturate(0.72) contrast(1.08);
+  opacity: 0.44;
+}
+
+.about-page-label {
+  color: var(--muted);
+  font: 9px/1 var(--utility);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.about-return {
+  min-height: 42px;
+  text-decoration: none;
+}
+
+.about-main {
+  display: grid;
+  grid-template-columns: minmax(160px, 0.7fr) minmax(0, 2.4fr) minmax(190px, 0.9fr);
+  width: min(1320px, 100%);
+  min-height: calc(100svh - 82px);
+  margin: 0 auto;
+  padding: clamp(48px, 8vw, 112px) max(28px, env(safe-area-inset-right)) max(54px, env(safe-area-inset-bottom)) max(28px, env(safe-area-inset-left));
+  gap: clamp(32px, 6vw, 92px);
+  align-items: start;
+}
+
+.about-index {
+  display: grid;
+  gap: 14px;
+  padding-top: 11px;
+  color: var(--muted);
+  font: 9px/1.2 var(--utility);
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+}
+
+.about-copy {
+  max-width: 720px;
+}
+
+.about-copy h1 {
+  max-width: 9ch;
+  margin: 20px 0 clamp(40px, 6vw, 76px);
+  font: 700 clamp(4.4rem, 9vw, 9.6rem)/0.76 var(--display);
+  letter-spacing: -0.07em;
+  text-transform: uppercase;
+}
+
+.about-copy > p:not(.eyebrow) {
+  max-width: 42rem;
+  margin: 0 0 24px;
+  color: rgba(242, 243, 245, 0.7);
+  font-size: clamp(1rem, 1.35vw, 1.2rem);
+  line-height: 1.68;
+}
+
+.about-copy > .about-lede {
+  color: var(--ink);
+  font-size: clamp(1.25rem, 2vw, 1.7rem);
+  line-height: 1.42;
+}
+
+.about-links {
+  display: grid;
+  gap: 0;
+  border-top: 1px solid var(--hairline);
+}
+
+.about-links a {
+  padding: 17px 2px;
+  border-bottom: 1px solid var(--hairline);
+  color: var(--muted);
+  font: 9px/1.2 var(--utility);
+  letter-spacing: 0.09em;
+  text-decoration: none;
+  text-transform: uppercase;
+  transition: color 180ms ease, border-color 180ms ease;
+}
+
+.about-links a:hover {
+  border-color: var(--accent);
+  color: var(--ink);
+}
+
+@media (max-width: 760px) {
+  .about-page-label {
+    display: none;
+  }
+
+  .about-main {
+    grid-template-columns: 1fr;
+    padding-top: 54px;
+    gap: 46px;
+  }
+
+  .about-index {
+    grid-template-columns: repeat(2, 1fr);
+    order: 2;
+    padding-top: 22px;
+    border-top: 1px solid var(--hairline);
+  }
+
+  .about-copy {
+    order: 1;
+  }
+
+  .about-copy h1 {
+    margin-bottom: 48px;
+    font-size: clamp(4rem, 20vw, 6.2rem);
+  }
+
+  .about-links {
+    order: 3;
   }
 }
 

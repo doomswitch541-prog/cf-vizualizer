@@ -1,4 +1,4 @@
-import { ColdflameVisualizer } from "./visualizer.js?v=20260828-1";
+import { ColdflameVisualizer } from "./visualizer.js?v=20260828-2";
 
 const elements = {
   audio: document.querySelector("#audio"),
@@ -29,9 +29,6 @@ const elements = {
   queueButton: document.querySelector("#queue-button"),
   queueClose: document.querySelector("#queue-close"),
   fullscreenButton: document.querySelector("#fullscreen-button"),
-  aboutButton: document.querySelector("#about-button"),
-  aboutDialog: document.querySelector("#about-dialog"),
-  dialogClose: document.querySelector("#dialog-close"),
   toast: document.querySelector("#toast"),
   themeColor: document.querySelector('meta[name="theme-color"]'),
   bassMeter: document.querySelector("#bass-meter"),
@@ -192,11 +189,9 @@ async function selectTrack(index, { autoplay = false, updateHistory = true } = {
 
   if (autoplay) {
     try {
-      await visualizer.connect();
-      await elements.audio.play();
+      await startPlayback();
     } catch (error) {
-      setStatus("Press play to continue");
-      console.warn("Playback needs another user gesture.", error);
+      reportPlaybackError(error);
     }
   }
 }
@@ -228,14 +223,33 @@ function buildTrackList() {
   elements.trackList.replaceChildren(...items);
 }
 
+function reportPlaybackError(error) {
+  const mediaError = elements.audio.error;
+  if (error?.name === "NotAllowedError") setStatus("Tap play once more");
+  else if (error?.name === "NotSupportedError" || mediaError?.code === 4) setStatus("This audio file could not play");
+  else setStatus("Playback failed — retry");
+  console.error("Coldflame playback failed.", { error, mediaError });
+}
+
+async function startPlayback() {
+  // Keep audio.play() in the original tap stack. Mobile Safari can discard the
+  // user activation if Web Audio setup is awaited before native playback.
+  const playbackAttempt = elements.audio.play();
+  const analysisAttempt = visualizer.connect().catch((error) => {
+    console.warn("Playback started without audio analysis.", error);
+    return false;
+  });
+
+  await playbackAttempt;
+  await analysisAttempt;
+}
+
 async function togglePlayback() {
   if (elements.audio.paused) {
     try {
-      await visualizer.connect();
-      await elements.audio.play();
+      await startPlayback();
     } catch (error) {
-      setStatus("Playback blocked — press play again");
-      console.warn("Playback could not start.", error);
+      reportPlaybackError(error);
     }
   } else {
     elements.audio.pause();
@@ -308,7 +322,7 @@ async function toggleFullscreen() {
 function bindMediaActions() {
   if (!("mediaSession" in navigator)) return;
   const actions = {
-    play: () => togglePlayback(),
+    play: () => startPlayback().catch(reportPlaybackError),
     pause: () => elements.audio.pause(),
     previoustrack: () => selectTrack(state.currentIndex - 1, { autoplay: true }),
     nexttrack: () => selectTrack(state.currentIndex + 1, { autoplay: true }),
@@ -334,12 +348,6 @@ function bindEvents() {
   elements.muteButton.addEventListener("click", toggleMute);
   elements.queueButton.addEventListener("click", () => { document.body.dataset.queueOpen = "true"; });
   elements.queueClose.addEventListener("click", () => { document.body.dataset.queueOpen = "false"; });
-  elements.aboutButton.addEventListener("click", () => elements.aboutDialog.showModal());
-  elements.dialogClose.addEventListener("click", () => elements.aboutDialog.close());
-  elements.aboutDialog.addEventListener("click", (event) => {
-    if (event.target === elements.aboutDialog) elements.aboutDialog.close();
-  });
-
   elements.seek.addEventListener("pointerdown", () => {
     state.isSeeking = true;
     state.wasPlayingBeforeSeek = !elements.audio.paused;
@@ -396,7 +404,6 @@ function bindEvents() {
   document.addEventListener("keydown", (event) => {
     const target = event.target;
     const isTyping = target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target instanceof HTMLButtonElement;
-    if (elements.aboutDialog.open && event.key !== "Escape") return;
     if (event.code === "Space" && !isTyping) {
       event.preventDefault();
       togglePlayback();
