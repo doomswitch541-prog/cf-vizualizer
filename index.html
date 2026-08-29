@@ -22,8 +22,8 @@
   <meta name="twitter:image" content="https://doomswitch541-prog.github.io/cf-vizualizer/assets/share/coldflame-archive-card.png">
   <title>Coldflame — Release Archive</title>
   <link rel="icon" href="assets/coldflame/artwork-web/2024-break-me-down.jpg">
-  <link rel="stylesheet" href="styles.css?v=20260829-3">
-  <script type="module" src="app.js?v=20260829-3"></script>
+  <link rel="stylesheet" href="styles.css?v=20260829-4">
+  <script type="module" src="app.js?v=20260829-4"></script>
 </head>
 <body>
   <div class="art-wash" id="art-wash" aria-hidden="true"></div>
@@ -55,9 +55,14 @@
 
   <main class="experience" id="experience">
     <nav class="catalog-rail" id="catalog-rail" aria-label="Coldflame tracks">
+      <div class="rail-mobile-head">
+        <span class="rail-mobile-brand">Coldflame</span>
+        <button class="queue-close" id="queue-close" type="button" aria-label="Close track list"><span aria-hidden="true">&times;</span></button>
+      </div>
       <div class="rail-heading">
         <span>Release chronology</span>
-        <button class="queue-close" id="queue-close" type="button" aria-label="Close track list">Close</button>
+        <span class="rail-heading-rule" aria-hidden="true"></span>
+        <span class="rail-track-count" aria-label="7 tracks">07</span>
       </div>
       <ol class="track-list" id="track-list"></ol>
       <div class="rail-foot">
@@ -66,8 +71,8 @@
           <span>2021—2025</span>
         </div>
         <div class="rail-links">
-          <a href="about.html">About</a>
-          <a href="https://linktr.ee/coldflame" target="_blank" rel="noopener">Coldflame ↗</a>
+          <a href="about.html"><span>About</span><span aria-hidden="true">&rsaquo;</span></a>
+          <a href="https://linktr.ee/coldflame" target="_blank" rel="noopener"><span>Coldflame</span><span aria-hidden="true">&nearr;</span></a>
         </div>
       </div>
     </nav>

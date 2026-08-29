@@ -460,7 +460,7 @@ export class ColdflameVisualizer {
     const mids = this.visualMids;
     const treble = this.visualTreble;
     const punch = Math.min(0.04, this.audioFlux * 0.9);
-    const fieldScale = Math.min(1.33, 1.1 + bass * 0.15 + mids * 0.08 + punch);
+    const fieldScale = Math.min(1.36, 1.12 + bass * 0.16 + mids * 0.085 + punch);
     this.stage.style.setProperty("--field-scale", fieldScale.toFixed(4));
     this.stage.style.setProperty("--field-rotation", "0");
     this.stage.dataset.fieldScale = fieldScale.toFixed(4);

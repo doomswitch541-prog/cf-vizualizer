@@ -1,4 +1,4 @@
-import { ColdflameVisualizer } from "./visualizer.js?v=20260829-3";
+import { ColdflameVisualizer } from "./visualizer.js?v=20260829-4";
 
 const elements = {
   audio: document.querySelector("#audio"),
@@ -240,6 +240,9 @@ function buildTrackList() {
     button.className = "track-select";
     button.type = "button";
     button.dataset.trackId = track.id;
+    button.style.setProperty("--track-primary", release.palette.primary);
+    button.style.setProperty("--track-accent", release.palette.accent);
+    button.style.setProperty("--track-highlight", release.palette.highlight);
     button.setAttribute("aria-current", String(index === state.currentIndex));
     button.setAttribute("aria-label", `Play ${track.title}`);
     button.innerHTML = `
