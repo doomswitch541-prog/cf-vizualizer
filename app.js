@@ -1,4 +1,4 @@
-import { ColdflameVisualizer } from "./visualizer.js?v=20260828-3";
+import { ColdflameVisualizer } from "./visualizer.js?v=20260828-4";
 
 const elements = {
   audio: document.querySelector("#audio"),
@@ -61,12 +61,12 @@ const visualizer = new ColdflameVisualizer({
   }
 });
 
-function formatTime(seconds, precision = false) {
+function formatTime(seconds, roundSeconds = false) {
   if (!Number.isFinite(seconds) || seconds < 0) return "0:00";
-  const minutes = Math.floor(seconds / 60);
-  const remaining = seconds - minutes * 60;
-  if (precision && remaining % 1 !== 0) return `${minutes}:${remaining.toFixed(3).padStart(6, "0")}`;
-  return `${minutes}:${Math.floor(remaining).toString().padStart(2, "0")}`;
+  const wholeSeconds = roundSeconds ? Math.round(seconds) : Math.floor(seconds);
+  const minutes = Math.floor(wholeSeconds / 60);
+  const remaining = wholeSeconds % 60;
+  return `${minutes}:${remaining.toString().padStart(2, "0")}`;
 }
 
 function releaseDisplayName(release) {
@@ -248,7 +248,7 @@ function buildTrackList() {
         <strong>${track.title}</strong>
         <small>${release.releaseDate.slice(0, 4)} · ${release.title}</small>
       </span>
-      <span class="track-duration">${formatTime(track.durationMs / 1000)}</span>
+      <span class="track-duration">${formatTime(track.durationMs / 1000, true)}</span>
     `;
     button.addEventListener("click", () => selectTrack(index, { autoplay: true }));
     item.append(button);
@@ -302,7 +302,7 @@ function updateTimeline() {
     elements.seek.style.setProperty("--range-fill", `${progress * 100}%`);
   }
   elements.elapsed.textContent = formatTime(elements.audio.currentTime);
-  elements.elapsed.dateTime = `PT${Math.max(0, elements.audio.currentTime).toFixed(3)}S`;
+  elements.elapsed.dateTime = `PT${Math.max(0, Math.floor(elements.audio.currentTime))}S`;
 }
 
 function setVolume(value) {

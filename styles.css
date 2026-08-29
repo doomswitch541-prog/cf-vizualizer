@@ -1078,6 +1078,14 @@ html[data-ready="true"] .site-footer {
 }
 
 @media (max-width: 900px) {
+  html[data-ready="true"] .experience {
+    animation-name: arrive-mobile;
+  }
+
+  body[data-queue-open="true"] .experience {
+    z-index: 50;
+  }
+
   body[data-queue-open="true"] {
     overflow: hidden;
   }
@@ -1106,6 +1114,7 @@ html[data-ready="true"] .site-footer {
     border-right-color: var(--hairline);
     background: color-mix(in srgb, var(--bg) 91%, var(--surface));
     box-shadow: 30px 0 90px rgba(0, 0, 0, 0.6);
+    overflow: hidden;
     transform: translateX(-105%);
     transition: transform 420ms var(--ease);
   }
@@ -1122,8 +1131,11 @@ html[data-ready="true"] .site-footer {
 
   .catalog-rail .track-list {
     flex: 1;
+    min-height: 0;
+    max-height: 100%;
     overflow-y: auto;
     overscroll-behavior: contain;
+    touch-action: pan-y;
     -webkit-overflow-scrolling: touch;
   }
 
@@ -1198,6 +1210,11 @@ html[data-ready="true"] .site-footer {
   .source-row {
     margin-top: 28px;
   }
+}
+
+@keyframes arrive-mobile {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 @media (max-width: 620px) {

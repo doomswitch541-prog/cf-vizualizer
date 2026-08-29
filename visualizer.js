@@ -9,6 +9,10 @@ function averageRange(values, start, end) {
   return total / (safeEnd - safeStart) / 255;
 }
 
+function shapeBand(value, exponent, gain) {
+  return Math.min(1, Math.pow(Math.max(0, value), exponent) * gain);
+}
+
 function hexToRgb(hex) {
   const clean = String(hex || "#ffffff").replace("#", "");
   const expanded = clean.length === 3 ? clean.split("").map((part) => part + part).join("") : clean;
@@ -23,6 +27,24 @@ function hexToRgb(hex) {
 function rgba(hex, alpha) {
   const { r, g, b } = hexToRgb(hex);
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+function mixHex(first, second, amount) {
+  const from = hexToRgb(first);
+  const to = hexToRgb(second);
+  const mix = Math.max(0, Math.min(1, amount));
+  const channel = (start, end) => Math.round(start + (end - start) * mix).toString(16).padStart(2, "0");
+  return `#${channel(from.r, to.r)}${channel(from.g, to.g)}${channel(from.b, to.b)}`;
+}
+
+function colorAt(colors, position) {
+  const safeColors = colors.length ? colors : ["#ffffff"];
+  const wrapped = ((position % 1) + 1) % 1;
+  const scaled = wrapped * safeColors.length;
+  const index = Math.floor(scaled) % safeColors.length;
+  const amount = scaled - Math.floor(scaled);
+  const eased = amount * amount * (3 - 2 * amount);
+  return mixHex(safeColors[index], safeColors[(index + 1) % safeColors.length], eased);
 }
 
 function pointOnOrbit(centerX, centerY, radiusX, radiusY, angle) {
@@ -45,7 +67,8 @@ export class ColdflameVisualizer {
       primary: "#42362a",
       secondary: "#7e96d2",
       accent: "#967e66",
-      highlight: "#d7d0c8"
+      highlight: "#d7d0c8",
+      colors: ["#08090b", "#18181d", "#2a2a42", "#42362a", "#967e66", "#7e96d2", "#d7d0c8"]
     };
     this.trackIndex = 0;
     this.trackCount = 7;
@@ -53,6 +76,20 @@ export class ColdflameVisualizer {
     this.mids = 0;
     this.treble = 0;
     this.intensity = 1.72;
+    this.audioEnergy = 0;
+    this.audioFlux = 0;
+    this.previousTargetEnergy = 0;
+    this.palettePhase = 0;
+    this.paletteTravel = 0;
+    this.lastAudioFrame = performance.now();
+    this.randomState = 0x51f15e;
+    this.nodePulseOrder = [];
+    this.nodePulseCursor = 0;
+    this.nodePulses = [];
+    this.nodePulseCount = 0;
+    this.nodePulseSeenMask = 0;
+    this.nextNodePulseAt = 0;
+    this.lastNodePulseAt = -Infinity;
     this.frame = 0;
     this.audioContext = null;
     this.analyser = null;
@@ -102,10 +139,68 @@ export class ColdflameVisualizer {
   setTrack(index, count = 7) {
     this.trackIndex = index;
     this.trackCount = count;
+    if (this.nodePulseOrder.length !== count) this.resetNodePulseOrder();
   }
 
   setIntensity(value) {
     this.intensity = Math.max(0.8, Math.min(2, Number(value) || 1));
+  }
+
+  getPaletteColors() {
+    const colors = Array.isArray(this.palette.colors)
+      ? this.palette.colors.filter((color) => /^#[0-9a-f]{3,8}$/i.test(String(color)))
+      : [];
+    return colors.length >= 3
+      ? colors
+      : [this.palette.background, this.palette.surface, this.palette.primary, this.palette.secondary, this.palette.accent, this.palette.highlight];
+  }
+
+  nextRandom() {
+    this.randomState = (Math.imul(this.randomState, 1664525) + 1013904223) >>> 0;
+    return this.randomState / 4294967296;
+  }
+
+  resetNodePulseOrder() {
+    this.nodePulseOrder = Array.from({ length: this.trackCount }, (_, index) => index);
+    for (let index = this.nodePulseOrder.length - 1; index > 0; index -= 1) {
+      const swapIndex = Math.floor(this.nextRandom() * (index + 1));
+      [this.nodePulseOrder[index], this.nodePulseOrder[swapIndex]] = [this.nodePulseOrder[swapIndex], this.nodePulseOrder[index]];
+    }
+    this.nodePulseCursor = 0;
+    this.nodePulses = Array.from({ length: this.trackCount }, () => null);
+  }
+
+  triggerNodePulse(time) {
+    if (this.nodePulseOrder.length !== this.trackCount || this.nodePulseCursor >= this.nodePulseOrder.length) {
+      this.resetNodePulseOrder();
+    }
+    const index = this.nodePulseOrder[this.nodePulseCursor];
+    this.nodePulseCursor += 1;
+    const band = index % 3;
+    const bandEnergy = [this.bass, this.mids, this.treble][band] * this.intensity;
+    const bandOffset = [0.02, 0.36, 0.69][band];
+    this.nodePulses[index] = {
+      startedAt: time,
+      duration: 480 + bandEnergy * 420 + this.nextRandom() * 240,
+      strength: 0.48 + Math.min(1, bandEnergy) * 0.64 + this.audioFlux * 0.9,
+      colorPosition: this.palettePhase + bandOffset + (this.nextRandom() - 0.5) * 0.08
+    };
+    this.nodePulseCount += 1;
+    this.nodePulseSeenMask |= 1 << index;
+    this.stage.dataset.nodePulseCount = String(this.nodePulseCount);
+    this.stage.dataset.nodePulseSeen = String(this.nodePulseSeenMask);
+    this.lastNodePulseAt = time;
+    const interval = 1750 + this.nextRandom() * 1250 - this.audioEnergy * 720;
+    this.nextNodePulseAt = time + Math.max(820, interval);
+  }
+
+  updateNodePulses(time) {
+    const playing = !this.audio.paused && !this.audio.ended;
+    if (!playing) return;
+    if (!this.nodePulseOrder.length) this.resetNodePulseOrder();
+    if (!this.nextNodePulseAt) this.nextNodePulseAt = time + 420;
+    const onset = this.audioFlux > 0.045 && time - this.lastNodePulseAt > 850;
+    if (time >= this.nextNodePulseAt || onset) this.triggerNodePulse(time);
   }
 
   resize() {
@@ -132,14 +227,19 @@ export class ColdflameVisualizer {
 
     if (playing && this.analyser && this.frequencyData) {
       this.analyser.getByteFrequencyData(this.frequencyData);
-      targetBass = averageRange(this.frequencyData, 1, 10);
-      targetMids = averageRange(this.frequencyData, 10, 42);
-      targetTreble = averageRange(this.frequencyData, 42, 104);
+      targetBass = shapeBand(averageRange(this.frequencyData, 1, 10), 0.68, 1.18);
+      targetMids = shapeBand(averageRange(this.frequencyData, 10, 42), 0.72, 1.1);
+      targetTreble = shapeBand(averageRange(this.frequencyData, 42, 104), 0.7, 1.16);
     } else if (!this.reducedMotion) {
       targetBass += (Math.sin(time * 0.00052) + 1) * 0.015;
       targetMids += (Math.sin(time * 0.00037 + 1.8) + 1) * 0.01;
       targetTreble += (Math.sin(time * 0.00081 + 4.1) + 1) * 0.006;
     }
+
+    const targetEnergy = targetBass * 0.46 + targetMids * 0.34 + targetTreble * 0.2;
+    const targetFlux = Math.max(0, targetEnergy - this.previousTargetEnergy);
+    this.previousTargetEnergy = targetEnergy;
+    this.audioFlux += (targetFlux - this.audioFlux) * 0.32;
 
     this.bass += (Math.min(1, targetBass) - this.bass) * 0.12;
     this.mids += (Math.min(1, targetMids) - this.mids) * 0.13;
@@ -148,9 +248,20 @@ export class ColdflameVisualizer {
     const visualBass = Math.min(1, this.bass * this.intensity);
     const visualMids = Math.min(1, this.mids * this.intensity);
     const visualTreble = Math.min(1, this.treble * this.intensity);
+    this.audioEnergy = visualBass * 0.46 + visualMids * 0.34 + visualTreble * 0.2;
+    const elapsed = Math.min(0.08, Math.max(0, (time - this.lastAudioFrame) / 1000));
+    this.lastAudioFrame = time;
+    const paletteSpeed = playing
+      ? 0.12 + this.audioEnergy * 0.42 + this.audioFlux * 0.85
+      : 0.02;
+    const motionScale = this.reducedMotion ? 0.3 : 1;
+    this.paletteTravel += elapsed * paletteSpeed * motionScale;
+    this.palettePhase = this.paletteTravel % 1;
     this.stage.style.setProperty("--bass", visualBass.toFixed(3));
     this.stage.style.setProperty("--mids", visualMids.toFixed(3));
     this.stage.style.setProperty("--treble", visualTreble.toFixed(3));
+    this.stage.style.setProperty("--palette-phase", this.palettePhase.toFixed(4));
+    this.stage.style.setProperty("--palette-travel", this.paletteTravel.toFixed(4));
     const progress = this.audio.duration ? this.audio.currentTime / this.audio.duration : 0;
     this.stage.style.setProperty("--progress", progress.toFixed(4));
 
@@ -182,7 +293,7 @@ export class ColdflameVisualizer {
 
     this.drawColorField(ctx, centerX, centerY, coverRadius, time);
     this.drawOuterHalo(ctx, centerX, centerY, orbitRadiusX, orbitRadiusY, breath, bassDepth);
-    this.drawArchiveOrbit(ctx, centerX, centerY, orbitRadiusX, orbitRadiusY, trebleLight);
+    this.drawArchiveOrbit(ctx, centerX, centerY, orbitRadiusX, orbitRadiusY, trebleLight, time);
     this.drawSpectrumBody(ctx, centerX, centerY, coverRadius, midBody, time);
     this.drawProgressArc(ctx, centerX, centerY, coverRadius);
     this.drawCornerSignals(ctx, trebleLight, time);
@@ -193,8 +304,12 @@ export class ColdflameVisualizer {
     const bass = Math.min(1, this.bass * this.intensity);
     const mids = Math.min(1, this.mids * this.intensity);
     const treble = Math.min(1, this.treble * this.intensity);
-    const baseRadius = coverRadius * (1.58 + bass * 0.3);
-    const rotation = -Math.PI / 2 + (this.reducedMotion ? 0 : Math.sin(time * 0.00019) * 0.025);
+    const punch = Math.min(0.16, this.audioFlux * 1.9);
+    const fieldScale = 1.32 + bass * 0.82 + mids * 0.18 + punch;
+    this.stage.style.setProperty("--field-scale", fieldScale.toFixed(4));
+    const baseRadius = coverRadius * fieldScale;
+    const spectrumRotation = this.palettePhase * TAU * (this.reducedMotion ? 0.08 : 0.48);
+    const rotation = -Math.PI / 2 + spectrumRotation + (this.reducedMotion ? 0 : Math.sin(time * 0.00042) * 0.035);
     const vertices = [];
 
     for (let index = 0; index < sides; index += 1) {
@@ -210,25 +325,30 @@ export class ColdflameVisualizer {
       });
     }
 
-    const fieldRadius = coverRadius * (2.25 + bass * 0.55);
+    const fieldRadius = coverRadius * (2.18 + bass * 0.64 + punch * 0.9);
     const highPresence = Math.max(0, this.intensity - 1) * 0.13;
-    const fields = [
-      { color: this.palette.primary, angle: -Math.PI * 0.76, energy: bass },
-      { color: this.palette.secondary, angle: -Math.PI * 0.18, energy: mids },
-      { color: this.palette.accent, angle: Math.PI * 0.34, energy: treble },
-      { color: this.palette.highlight, angle: Math.PI * 0.82, energy: (mids + treble) * 0.5 }
-    ];
+    const paletteColors = this.getPaletteColors();
+    const bandEnergies = [bass, mids, treble];
+    const fields = paletteColors.map((_, index) => {
+      const band = index % 3;
+      return {
+        color: colorAt(paletteColors, this.palettePhase + index / paletteColors.length),
+        angle: -Math.PI / 2 + (index / paletteColors.length) * TAU + spectrumRotation,
+        energy: bandEnergies[band],
+        band
+      };
+    });
 
     ctx.save();
     ctx.globalCompositeOperation = "lighter";
     ctx.filter = `saturate(${1.12 + this.intensity * 0.22})`;
     fields.forEach((field) => {
-      const travel = coverRadius * (0.56 + field.energy * 0.38);
+      const travel = coverRadius * (0.5 + field.energy * 0.46 + punch * 0.6);
       const x = centerX + Math.cos(field.angle) * travel;
       const y = centerY + Math.sin(field.angle) * travel;
       const gradient = ctx.createRadialGradient(x, y, 0, x, y, fieldRadius);
-      gradient.addColorStop(0, rgba(field.color, 0.13 + highPresence + field.energy * 0.46));
-      gradient.addColorStop(0.34, rgba(field.color, 0.075 + highPresence * 0.62 + field.energy * 0.28));
+      gradient.addColorStop(0, rgba(field.color, 0.12 + highPresence + field.energy * 0.5));
+      gradient.addColorStop(0.34, rgba(field.color, 0.07 + highPresence * 0.62 + field.energy * 0.31));
       gradient.addColorStop(1, rgba(field.color, 0));
       ctx.fillStyle = gradient;
       ctx.fillRect(centerX - fieldRadius, centerY - fieldRadius, fieldRadius * 2, fieldRadius * 2);
@@ -247,7 +367,7 @@ export class ColdflameVisualizer {
     ctx.filter = `saturate(${1.18 + this.intensity * 0.26})`;
 
     fields.forEach((field) => {
-      const travel = coverRadius * (0.28 + field.energy * 0.36);
+      const travel = coverRadius * (0.26 + field.energy * 0.43 + punch * 0.38);
       const x = centerX + Math.cos(field.angle) * travel;
       const y = centerY + Math.sin(field.angle) * travel;
       const gradient = ctx.createRadialGradient(x, y, 0, x, y, fieldRadius);
@@ -267,10 +387,12 @@ export class ColdflameVisualizer {
       else ctx.lineTo(point.x, point.y);
     });
     ctx.closePath();
-    ctx.strokeStyle = rgba(this.palette.highlight, 0.18 + mids * 0.46);
-    ctx.lineWidth = 0.9 + mids * 1.8;
-    ctx.shadowColor = rgba(this.palette.secondary, 0.62 + bass * 0.28);
-    ctx.shadowBlur = 16 + bass * 42;
+    const outlineColor = colorAt(paletteColors, this.palettePhase + 0.58);
+    const shadowColor = colorAt(paletteColors, this.palettePhase + 0.19);
+    ctx.strokeStyle = rgba(outlineColor, 0.18 + mids * 0.46 + punch * 0.5);
+    ctx.lineWidth = 0.9 + mids * 1.8 + punch * 2;
+    ctx.shadowColor = rgba(shadowColor, 0.62 + bass * 0.28);
+    ctx.shadowBlur = 16 + bass * 42 + punch * 35;
     ctx.stroke();
     ctx.restore();
   }
@@ -278,10 +400,11 @@ export class ColdflameVisualizer {
   drawOuterHalo(ctx, centerX, centerY, radiusX, radiusY, breath, bassDepth) {
     ctx.save();
     ctx.globalCompositeOperation = "lighter";
+    const paletteColors = this.getPaletteColors();
     const rings = [
-      { scale: 1.03, color: this.palette.primary, alpha: 0.16, width: 1 },
-      { scale: 1.13, color: this.palette.secondary, alpha: 0.12, width: 1 },
-      { scale: 1.25, color: this.palette.accent, alpha: 0.075, width: 0.8 }
+      { scale: 1.03, color: colorAt(paletteColors, this.palettePhase + 0.06), alpha: 0.16, width: 1 },
+      { scale: 1.13, color: colorAt(paletteColors, this.palettePhase + 0.39), alpha: 0.12, width: 1 },
+      { scale: 1.25, color: colorAt(paletteColors, this.palettePhase + 0.72), alpha: 0.075, width: 0.8 }
     ];
 
     rings.forEach((ring, index) => {
@@ -305,7 +428,14 @@ export class ColdflameVisualizer {
     ctx.restore();
   }
 
-  drawArchiveOrbit(ctx, centerX, centerY, radiusX, radiusY, trebleLight) {
+  drawArchiveOrbit(ctx, centerX, centerY, radiusX, radiusY, trebleLight, time) {
+    this.updateNodePulses(time);
+    const paletteColors = this.getPaletteColors();
+    const bandEnergies = [
+      Math.min(1, this.bass * this.intensity),
+      Math.min(1, this.mids * this.intensity),
+      Math.min(1, this.treble * this.intensity)
+    ];
     const nodes = Array.from({ length: this.trackCount }, (_, index) => {
       const angle = -Math.PI / 2 + (index / this.trackCount) * TAU;
       return { ...pointOnOrbit(centerX, centerY, radiusX, radiusY, angle), angle, index };
@@ -318,35 +448,56 @@ export class ColdflameVisualizer {
       else ctx.lineTo(node.x, node.y);
     });
     ctx.closePath();
-    ctx.strokeStyle = rgba(this.palette.highlight, 0.105 + this.mids * 0.08);
+    ctx.strokeStyle = rgba(colorAt(paletteColors, this.palettePhase + 0.83), 0.105 + this.mids * 0.08);
     ctx.lineWidth = 0.75 + this.mids * 0.75;
     ctx.stroke();
 
+    let strongestPulse = 0;
     nodes.forEach((node) => {
+      const band = node.index % 3;
+      const bandEnergy = bandEnergies[band];
+      const pulse = this.nodePulses[node.index];
+      let flare = 0;
+      let colorPosition = this.palettePhase + node.index / Math.max(1, this.trackCount) + [0.02, 0.36, 0.69][band];
+      if (pulse) {
+        const progress = (time - pulse.startedAt) / pulse.duration;
+        if (progress >= 0 && progress <= 1) {
+          flare = Math.sin(progress * Math.PI) ** 2 * pulse.strength * (0.46 + bandEnergy * 0.72);
+          colorPosition = pulse.colorPosition;
+        } else if (progress > 1) {
+          this.nodePulses[node.index] = null;
+        }
+      }
+      strongestPulse = Math.max(strongestPulse, flare);
+      const nodeColor = colorAt(paletteColors, colorPosition);
+
       ctx.beginPath();
       ctx.moveTo(centerX, centerY);
       ctx.lineTo(node.x, node.y);
-      ctx.strokeStyle = rgba(this.palette.secondary, node.index === this.trackIndex ? 0.19 : 0.055);
-      ctx.lineWidth = 0.65;
+      ctx.strokeStyle = rgba(nodeColor, node.index === this.trackIndex ? 0.2 + flare * 0.16 : 0.05 + flare * 0.18);
+      ctx.lineWidth = 0.65 + flare * 0.7;
       ctx.stroke();
 
       const active = node.index === this.trackIndex;
-      const radius = active ? 5.4 + this.bass * 4.2 : 2.1 + trebleLight * 1.6;
+      const radius = active
+        ? 5.4 + this.bass * 4.2 + flare * 3.2
+        : 2.1 + trebleLight * 1.25 + flare * 4.6;
       ctx.beginPath();
       ctx.arc(node.x, node.y, radius, 0, TAU);
-      ctx.fillStyle = rgba(active ? this.palette.accent : this.palette.highlight, active ? 0.95 : 0.35 + trebleLight * 0.3);
-      ctx.shadowColor = rgba(active ? this.palette.accent : this.palette.secondary, 0.7);
-      ctx.shadowBlur = active ? 15 + this.bass * 18 : 4 + trebleLight * 10;
+      ctx.fillStyle = rgba(nodeColor, active ? 0.92 : 0.28 + trebleLight * 0.24 + flare * 0.58);
+      ctx.shadowColor = rgba(nodeColor, 0.74);
+      ctx.shadowBlur = active ? 15 + this.bass * 18 + flare * 14 : 4 + trebleLight * 8 + flare * 22;
       ctx.fill();
 
-      if (active) {
+      if (active || flare > 0.08) {
         ctx.beginPath();
-        ctx.arc(node.x, node.y, radius + 6 + this.bass * 5, 0, TAU);
-        ctx.strokeStyle = rgba(this.palette.highlight, 0.2 + this.treble * 0.28);
-        ctx.lineWidth = 0.8;
+        ctx.arc(node.x, node.y, radius + 5 + this.bass * 5 + flare * 5, 0, TAU);
+        ctx.strokeStyle = rgba(colorAt(paletteColors, colorPosition + 0.14), 0.16 + this.treble * 0.26 + flare * 0.38);
+        ctx.lineWidth = 0.75 + flare * 0.8;
         ctx.stroke();
       }
     });
+    this.stage.style.setProperty("--node-pulse", Math.min(1, strongestPulse).toFixed(3));
     ctx.restore();
   }
 
@@ -374,9 +525,10 @@ export class ColdflameVisualizer {
     }
 
     ctx.closePath();
-    ctx.strokeStyle = rgba(this.palette.highlight, 0.18 + this.mids * 0.38);
+    const spectrumColor = colorAt(this.getPaletteColors(), this.palettePhase + 0.38);
+    ctx.strokeStyle = rgba(spectrumColor, 0.18 + this.mids * 0.38);
     ctx.lineWidth = 0.7 + this.mids * 1.55;
-    ctx.shadowColor = rgba(this.palette.secondary, 0.52);
+    ctx.shadowColor = rgba(spectrumColor, 0.52);
     ctx.shadowBlur = 4 + this.treble * 10;
     ctx.stroke();
     ctx.restore();
@@ -388,9 +540,10 @@ export class ColdflameVisualizer {
     ctx.save();
     ctx.beginPath();
     ctx.arc(centerX, centerY, arcRadius, -Math.PI / 2, -Math.PI / 2 + TAU * progress);
-    ctx.strokeStyle = rgba(this.palette.accent, 0.72);
+    const progressColor = colorAt(this.getPaletteColors(), this.palettePhase + 0.7);
+    ctx.strokeStyle = rgba(progressColor, 0.72);
     ctx.lineWidth = 1.5;
-    ctx.shadowColor = rgba(this.palette.accent, 0.5);
+    ctx.shadowColor = rgba(progressColor, 0.5);
     ctx.shadowBlur = 8;
     ctx.stroke();
     ctx.restore();
@@ -408,7 +561,8 @@ export class ColdflameVisualizer {
       [padding, this.height - padding, 1, -1]
     ];
     ctx.save();
-    ctx.strokeStyle = rgba(this.palette.accent, Math.min(0.5, trebleLight * 0.4) * pulse);
+    const trebleColor = colorAt(this.getPaletteColors(), this.palettePhase + 0.68);
+    ctx.strokeStyle = rgba(trebleColor, Math.min(0.5, trebleLight * 0.4) * pulse);
     ctx.lineWidth = 1;
     corners.forEach(([x, y, directionX, directionY]) => {
       ctx.beginPath();
