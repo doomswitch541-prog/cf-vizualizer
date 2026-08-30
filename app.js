@@ -1,4 +1,4 @@
-import { ColdflameVisualizer } from "./visualizer.js?v=20260829-4";
+import { ColdflameVisualizer } from "./visualizer.js?v=20260829-5";
 
 const elements = {
   audio: document.querySelector("#audio"),
@@ -246,6 +246,7 @@ function buildTrackList() {
     button.setAttribute("aria-current", String(index === state.currentIndex));
     button.setAttribute("aria-label", `Play ${track.title}`);
     button.innerHTML = `
+      <span class="track-thumb"><img src="${artworkPath(release)}" alt="" loading="lazy" decoding="async"></span>
       <span class="track-number">${String(index + 1).padStart(2, "0")}</span>
       <span class="track-copy">
         <strong>${track.title}</strong>

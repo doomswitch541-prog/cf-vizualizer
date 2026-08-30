@@ -73,6 +73,22 @@ function mixHex(first, second, amount) {
   return `#${channel(from.r, to.r)}${channel(from.g, to.g)}${channel(from.b, to.b)}`;
 }
 
+function relativeLuminance(hex) {
+  const { r, g, b } = hexToRgb(hex);
+  const linear = (value) => {
+    const channel = value / 255;
+    return channel <= 0.04045 ? channel / 12.92 : Math.pow((channel + 0.055) / 1.055, 2.4);
+  };
+  return linear(r) * 0.2126 + linear(g) * 0.7152 + linear(b) * 0.0722;
+}
+
+function colorSaturation(hex) {
+  const { r, g, b } = hexToRgb(hex);
+  const high = Math.max(r, g, b);
+  const low = Math.min(r, g, b);
+  return high ? (high - low) / high : 0;
+}
+
 function colorAt(colors, position) {
   const safeColors = colors.length ? colors : ["#ffffff"];
   const wrapped = ((position % 1) + 1) % 1;
@@ -123,16 +139,25 @@ export class ColdflameVisualizer {
     this.previousBandTargets = [0, 0, 0];
     this.bandBaselines = [0, 0, 0];
     this.bandBaselinesReady = false;
+    this.bandFloors = [0, 0, 0];
+    this.bandCeilings = [0.18, 0.18, 0.18];
+    this.bandRangesReady = false;
+    this.bandImpacts = [0, 0, 0];
+    this.impactEnergy = 0;
     this.fastEnergy = 0;
     this.slowEnergy = 0;
     this.palettePhase = 0;
     this.paletteTravel = 0;
     this.paletteVelocity = 0;
+    this.paletteMonochrome = 0;
+    this.signalColors = [];
+    this.fieldScale = 1.22;
     this.isPlaying = false;
     this.cornerSweep = null;
     this.cornerSweepCount = 0;
     this.cornerDropCount = 0;
     this.cornerAccentCount = 0;
+    this.cornerVariants = ["turn", "trace", "opposing"];
     this.lastCornerSweepAt = -Infinity;
     this.nextCornerSweepAt = performance.now() + 6800;
     this.lastAudioFrame = performance.now();
@@ -190,12 +215,20 @@ export class ColdflameVisualizer {
 
   setPalette(palette) {
     this.palette = { ...this.palette, ...palette };
+    const colors = this.getPaletteColors();
+    const averageSaturation = colors.reduce((total, color) => total + colorSaturation(color), 0) / Math.max(1, colors.length);
+    this.paletteMonochrome = Math.max(0, Math.min(1, (0.34 - averageSaturation) / 0.34));
+    this.signalColors = this.createSignalColors(colors);
+    this.stage.dataset.paletteMonochrome = this.paletteMonochrome.toFixed(3);
   }
 
   setTrack(index, count = 7) {
     this.trackIndex = index;
     this.trackCount = count;
     this.bandBaselinesReady = false;
+    this.bandRangesReady = false;
+    this.bandImpacts = [0, 0, 0];
+    this.impactEnergy = 0;
     if (this.nodePulseOrder.length !== count) this.resetNodePulseOrder();
   }
 
@@ -210,6 +243,28 @@ export class ColdflameVisualizer {
     return colors.length >= 3
       ? colors
       : [this.palette.background, this.palette.surface, this.palette.primary, this.palette.secondary, this.palette.accent, this.palette.highlight];
+  }
+
+  createSignalColors(colors = this.getPaletteColors()) {
+    const backgroundLuminance = relativeLuminance(this.palette.background);
+    const highlight = relativeLuminance(this.palette.highlight) > relativeLuminance(this.palette.secondary)
+      ? this.palette.highlight
+      : this.palette.secondary;
+    const minimumDistance = 0.1 + this.paletteMonochrome * 0.12;
+
+    return colors.map((color) => {
+      if (Math.abs(relativeLuminance(color) - backgroundLuminance) >= minimumDistance) return color;
+      let visible = color;
+      for (let amount = 0.16; amount <= 0.76; amount += 0.12) {
+        visible = mixHex(color, highlight, amount);
+        if (Math.abs(relativeLuminance(visible) - backgroundLuminance) >= minimumDistance) break;
+      }
+      return visible;
+    });
+  }
+
+  getSignalColors() {
+    return this.signalColors.length ? this.signalColors : this.createSignalColors();
   }
 
   nextRandom() {
@@ -281,11 +336,13 @@ export class ColdflameVisualizer {
 
   triggerCornerSweep(time, reason, strength) {
     const safeStrength = Math.max(0.45, Math.min(1, strength));
+    const variant = this.cornerVariants[this.cornerSweepCount % this.cornerVariants.length];
     this.cornerSweep = {
       startedAt: time,
       duration: 1320 - safeStrength * 220,
       strength: safeStrength,
-      reason
+      reason,
+      variant
     };
     this.cornerSweepCount += 1;
     if (reason === "drop") this.cornerDropCount += 1;
@@ -296,32 +353,41 @@ export class ColdflameVisualizer {
     this.stage.dataset.cornerDropCount = String(this.cornerDropCount);
     this.stage.dataset.cornerAccentCount = String(this.cornerAccentCount);
     this.stage.dataset.cornerSweepReason = reason;
+    this.stage.dataset.cornerVariant = variant;
   }
 
   updateCornerSweep(time) {
     let rotation = 0;
     let flare = 0;
+    let trace = 0;
+    let opposing = 0;
 
     if (this.cornerSweep) {
       const progress = (time - this.cornerSweep.startedAt) / this.cornerSweep.duration;
       if (progress >= 1) {
         this.cornerSweep = null;
         this.stage.dataset.cornerSweepReason = "idle";
+        this.stage.dataset.cornerVariant = "idle";
       } else if (progress >= 0) {
         const eased = 1 - Math.pow(1 - progress, 3);
-        rotation = this.reducedMotion ? 0 : eased * 360;
         flare = Math.pow(Math.sin(progress * Math.PI), 1.35) * this.cornerSweep.strength;
+        if (this.cornerSweep.variant === "turn") rotation = this.reducedMotion ? 0 : eased * 360;
+        else if (this.cornerSweep.variant === "trace") trace = eased;
+        else opposing = Math.sin(progress * Math.PI) * this.cornerSweep.strength;
       }
     }
 
     this.stage.style.setProperty("--corner-turn", `${rotation.toFixed(2)}deg`);
     this.stage.style.setProperty("--corner-flare", flare.toFixed(3));
-    this.stage.style.setProperty("--corner-grow", `${(flare * 7).toFixed(2)}px`);
+    this.stage.style.setProperty("--corner-grow", `${(flare * 7 + opposing * 5).toFixed(2)}px`);
     this.stage.style.setProperty("--corner-glow", `${(flare * 9).toFixed(2)}px`);
     this.stage.style.setProperty("--corner-scale", (1 + flare * 0.018).toFixed(4));
     this.stage.style.setProperty("--corner-opacity", (0.82 + flare * 0.18).toFixed(3));
     this.stage.style.setProperty("--corner-width", `${(1.6 + flare * 1.35).toFixed(2)}px`);
-    this.stage.style.setProperty("--corner-color", colorAt(this.getPaletteColors(), this.palettePhase + 0.64));
+    this.stage.style.setProperty("--corner-trace", trace.toFixed(4));
+    this.stage.style.setProperty("--corner-opposing", opposing.toFixed(4));
+    this.stage.style.setProperty("--corner-shift", `${(opposing * 4).toFixed(2)}px`);
+    this.stage.style.setProperty("--corner-color", colorAt(this.getSignalColors(), this.palettePhase + 0.64));
   }
 
   readAudio(time) {
@@ -339,31 +405,64 @@ export class ColdflameVisualizer {
       targetTreble = Math.min(1, normalizeBand(bandSignal(this.frequencyData, 31, 106), 0.07, 0.78, 1.02) * intensityGain);
     }
 
+    const targets = [targetBass, targetMids, targetTreble];
     const targetEnergy = targetBass * 0.46 + targetMids * 0.34 + targetTreble * 0.2;
-    const positiveBandFlux = Math.max(0, targetBass - this.previousBandTargets[0]) * 0.46
-      + Math.max(0, targetMids - this.previousBandTargets[1]) * 0.34
-      + Math.max(0, targetTreble - this.previousBandTargets[2]) * 0.2;
+    let bandDeltas = targets.map((target, index) => target - this.previousBandTargets[index]);
+    if (playing && !this.bandRangesReady && targetEnergy > 0.02) {
+      this.bandFloors = targets.map((target) => Math.max(0, target - 0.08));
+      this.bandCeilings = targets.map((target) => Math.min(1, target + 0.12));
+      this.previousBandTargets = [...targets];
+      this.previousTargetEnergy = targetEnergy;
+      this.bandRangesReady = true;
+      bandDeltas = [0, 0, 0];
+    }
+    const positiveBands = bandDeltas.map((delta) => Math.max(0, delta));
+    const positiveBandFlux = positiveBands[0] * 0.46
+      + positiveBands[1] * 0.34
+      + positiveBands[2] * 0.2;
     const targetFlux = Math.max(0, targetEnergy - this.previousTargetEnergy) + positiveBandFlux * 0.72;
-    this.bandMotion = Math.abs(targetBass - this.previousBandTargets[0]) * 0.46
-      + Math.abs(targetMids - this.previousBandTargets[1]) * 0.34
-      + Math.abs(targetTreble - this.previousBandTargets[2]) * 0.2;
+    this.bandMotion = Math.abs(bandDeltas[0]) * 0.46
+      + Math.abs(bandDeltas[1]) * 0.34
+      + Math.abs(bandDeltas[2]) * 0.2;
     this.previousTargetEnergy = targetEnergy;
-    this.previousBandTargets = [targetBass, targetMids, targetTreble];
+    this.previousBandTargets = [...targets];
     this.audioFlux += (targetFlux - this.audioFlux) * 0.44;
     this.fastEnergy += (targetEnergy - this.fastEnergy) * 0.32;
     this.slowEnergy += (targetEnergy - this.slowEnergy) * 0.028;
+    this.bandImpacts = this.bandImpacts.map((impact, index) => followBand(impact, positiveBands[index], 0.52, 0.11));
+    this.impactEnergy = this.bandImpacts[0] * 0.5 + this.bandImpacts[1] * 0.34 + this.bandImpacts[2] * 0.16;
 
     let responsiveBass = 0;
     let responsiveMids = 0;
     let responsiveTreble = 0;
     if (playing) {
       if (!this.bandBaselinesReady && targetEnergy > 0.02) {
-        this.bandBaselines = [targetBass, targetMids, targetTreble];
+        this.bandBaselines = [...targets];
         this.bandBaselinesReady = true;
       }
-      responsiveBass = Math.min(1, targetBass * 0.74 + Math.max(0, targetBass - this.bandBaselines[0]) * 1.9);
-      responsiveMids = Math.min(1, targetMids * 0.74 + Math.max(0, targetMids - this.bandBaselines[1]) * 1.7);
-      responsiveTreble = Math.min(1, targetTreble * 0.72 + Math.max(0, targetTreble - this.bandBaselines[2]) * 1.5);
+      this.bandFloors = this.bandFloors.map((floor, index) => floor + (targets[index] - floor) * (targets[index] < floor ? 0.11 : 0.0016));
+      this.bandCeilings = this.bandCeilings.map((ceiling, index) => ceiling + (targets[index] - ceiling) * (targets[index] > ceiling ? 0.085 : 0.0028));
+      const relativeBands = targets.map((target, index) => Math.max(0, Math.min(1,
+        (target - this.bandFloors[index]) / Math.max(0.14, this.bandCeilings[index] - this.bandFloors[index])
+      )));
+      responsiveBass = Math.min(1,
+        targetBass * 0.54
+        + relativeBands[0] * 0.26
+        + Math.max(0, targetBass - this.bandBaselines[0]) * 1.18
+        + positiveBands[0] * 1.65
+      );
+      responsiveMids = Math.min(1,
+        targetMids * 0.52
+        + relativeBands[1] * 0.27
+        + Math.max(0, targetMids - this.bandBaselines[1]) * 1.12
+        + positiveBands[1] * 1.5
+      );
+      responsiveTreble = Math.min(1,
+        targetTreble * 0.5
+        + relativeBands[2] * 0.26
+        + Math.max(0, targetTreble - this.bandBaselines[2]) * 1.02
+        + positiveBands[2] * 1.3
+      );
       this.bandBaselines = [
         followBand(this.bandBaselines[0], targetBass, 0.012, 0.02),
         followBand(this.bandBaselines[1], targetMids, 0.012, 0.02),
@@ -399,7 +498,7 @@ export class ColdflameVisualizer {
     if (dropReady) this.triggerCornerSweep(time, "drop", 0.58 + dropContrast * 0.7);
     else if (accentReady) this.triggerCornerSweep(time, "accent", 0.58 + this.audioEnergy * 0.45);
     const targetPaletteVelocity = playing
-      ? 0.008 + this.rawEnergy * 0.055 + this.bandMotion * 3.2 + this.audioFlux * 4.2
+      ? 0.008 + this.rawEnergy * 0.05 + this.bandMotion * 2.35 + this.audioFlux * 2.6 + this.impactEnergy * 3.4
       : 0.006;
     this.paletteVelocity = followBand(this.paletteVelocity, targetPaletteVelocity, 0.34, 0.075);
     const motionScale = this.reducedMotion ? 0.3 : 1;
@@ -415,6 +514,7 @@ export class ColdflameVisualizer {
     this.stage.dataset.mids = visualMids.toFixed(3);
     this.stage.dataset.treble = visualTreble.toFixed(3);
     this.stage.dataset.audioFlux = this.audioFlux.toFixed(4);
+    this.stage.dataset.impactEnergy = this.impactEnergy.toFixed(4);
     this.stage.dataset.paletteVelocity = this.paletteVelocity.toFixed(4);
     const progress = this.audio.duration ? this.audio.currentTime / this.audio.duration : 0;
     this.stage.style.setProperty("--progress", progress.toFixed(4));
@@ -459,12 +559,13 @@ export class ColdflameVisualizer {
     const bass = this.visualBass;
     const mids = this.visualMids;
     const treble = this.visualTreble;
-    const punch = Math.min(0.04, this.audioFlux * 0.9);
-    const fieldScale = Math.min(1.36, 1.12 + bass * 0.16 + mids * 0.085 + punch);
-    this.stage.style.setProperty("--field-scale", fieldScale.toFixed(4));
+    const punch = Math.min(0.08, this.impactEnergy * 1.4 + this.audioFlux * 0.18);
+    const fieldTarget = Math.min(1.56, 1.22 + bass * 0.22 + mids * 0.12 + punch * 1.05);
+    this.fieldScale = followBand(this.fieldScale, fieldTarget, 0.18, 0.075);
+    this.stage.style.setProperty("--field-scale", this.fieldScale.toFixed(4));
     this.stage.style.setProperty("--field-rotation", "0");
-    this.stage.dataset.fieldScale = fieldScale.toFixed(4);
-    const baseRadius = coverRadius * fieldScale;
+    this.stage.dataset.fieldScale = this.fieldScale.toFixed(4);
+    const baseRadius = coverRadius * this.fieldScale;
     const rotation = -Math.PI / 2;
     const vertices = [];
 
@@ -487,7 +588,8 @@ export class ColdflameVisualizer {
 
     const fieldRadius = coverRadius * (1.5 + bass * 0.28 + punch * 0.4);
     const highPresence = Math.max(0, this.intensity - 1) * 0.13;
-    const paletteColors = this.getPaletteColors();
+    const paletteColors = this.getSignalColors();
+    const contrastBoost = 1 + this.paletteMonochrome * 0.48;
     const bandEnergies = [bass, mids, treble];
     const fields = paletteColors.map((_, index) => {
       const band = index % 3;
@@ -507,8 +609,8 @@ export class ColdflameVisualizer {
       const x = centerX + Math.cos(field.angle) * travel;
       const y = centerY + Math.sin(field.angle) * travel;
       const gradient = ctx.createRadialGradient(x, y, 0, x, y, fieldRadius);
-      gradient.addColorStop(0, rgba(field.color, 0.025 + highPresence * 0.05 + field.energy * 0.12));
-      gradient.addColorStop(0.38, rgba(field.color, 0.018 + highPresence * 0.025 + field.energy * 0.07));
+      gradient.addColorStop(0, rgba(field.color, (0.025 + highPresence * 0.05 + field.energy * 0.12) * contrastBoost));
+      gradient.addColorStop(0.38, rgba(field.color, (0.018 + highPresence * 0.025 + field.energy * 0.07) * contrastBoost));
       gradient.addColorStop(1, rgba(field.color, 0));
       ctx.fillStyle = gradient;
       ctx.fillRect(centerX - fieldRadius, centerY - fieldRadius, fieldRadius * 2, fieldRadius * 2);
@@ -524,7 +626,7 @@ export class ColdflameVisualizer {
     ctx.closePath();
     ctx.clip();
     const membraneColor = colorAt(paletteColors, this.palettePhase + 0.11);
-    ctx.fillStyle = rgba(membraneColor, 0.035 + bass * 0.035);
+    ctx.fillStyle = rgba(membraneColor, (0.04 + bass * 0.045) * contrastBoost);
     ctx.fill();
     ctx.globalCompositeOperation = "screen";
     ctx.filter = `saturate(${1.22 + this.intensity * 0.14})`;
@@ -534,8 +636,8 @@ export class ColdflameVisualizer {
       const x = centerX + Math.cos(field.angle) * travel;
       const y = centerY + Math.sin(field.angle) * travel;
       const gradient = ctx.createRadialGradient(x, y, 0, x, y, fieldRadius);
-      gradient.addColorStop(0, rgba(field.color, 0.07 + highPresence * 0.08 + field.energy * 0.18));
-      gradient.addColorStop(0.46, rgba(field.color, 0.028 + highPresence * 0.04 + field.energy * 0.09));
+      gradient.addColorStop(0, rgba(field.color, (0.07 + highPresence * 0.08 + field.energy * 0.18) * contrastBoost));
+      gradient.addColorStop(0.46, rgba(field.color, (0.028 + highPresence * 0.04 + field.energy * 0.09) * contrastBoost));
       gradient.addColorStop(1, rgba(field.color, 0));
       ctx.fillStyle = gradient;
       ctx.fillRect(centerX - fieldRadius, centerY - fieldRadius, fieldRadius * 2, fieldRadius * 2);
@@ -552,8 +654,8 @@ export class ColdflameVisualizer {
     ctx.closePath();
     const outlineColor = colorAt(paletteColors, this.palettePhase + 0.58);
     const shadowColor = colorAt(paletteColors, this.palettePhase + 0.19);
-    ctx.strokeStyle = rgba(outlineColor, 0.28 + mids * 0.35 + punch * 0.3);
-    ctx.lineWidth = 0.9 + mids * 1.4 + punch * 1.2;
+    ctx.strokeStyle = rgba(outlineColor, Math.min(0.96, (0.34 + mids * 0.38 + punch * 0.4) * contrastBoost));
+    ctx.lineWidth = 1.15 + mids * 1.55 + punch * 1.35 + this.paletteMonochrome * 0.55;
     ctx.shadowColor = rgba(shadowColor, 0.4 + bass * 0.25);
     ctx.shadowBlur = 8 + bass * 20 + punch * 12;
     ctx.stroke();
@@ -563,7 +665,11 @@ export class ColdflameVisualizer {
   drawOuterHalo(ctx, centerX, centerY, radiusX, radiusY, breath, bassDepth) {
     ctx.save();
     ctx.globalCompositeOperation = "lighter";
-    const paletteColors = this.getPaletteColors();
+    const paletteColors = this.getSignalColors();
+    const progress = this.audio.duration ? this.audio.currentTime / this.audio.duration : 0;
+    const lateProgress = Math.max(0, Math.min(1, (progress - 0.52) / 0.48));
+    const lateEase = lateProgress * lateProgress * (3 - 2 * lateProgress);
+    const progressGlow = lateEase * (0.025 + this.audioEnergy * 0.12 + this.impactEnergy * 0.65);
     const rings = [
       { scale: 1.03, color: colorAt(paletteColors, this.palettePhase + 0.06), alpha: 0.16, width: 1 },
       { scale: 1.13, color: colorAt(paletteColors, this.palettePhase + 0.39), alpha: 0.12, width: 1 },
@@ -582,10 +688,10 @@ export class ColdflameVisualizer {
         0,
         TAU
       );
-      ctx.strokeStyle = rgba(ring.color, ring.alpha + this.visualBass * 0.1);
-      ctx.lineWidth = ring.width;
+      ctx.strokeStyle = rgba(ring.color, ring.alpha + this.visualBass * 0.1 + progressGlow * (1 - index * 0.16));
+      ctx.lineWidth = ring.width + lateEase * this.audioEnergy * 0.45;
       ctx.shadowColor = rgba(ring.color, 0.42);
-      ctx.shadowBlur = 7 + this.visualBass * 14;
+      ctx.shadowBlur = 7 + this.visualBass * 14 + progressGlow * 46;
       ctx.stroke();
     });
     ctx.restore();
@@ -593,7 +699,7 @@ export class ColdflameVisualizer {
 
   drawArchiveOrbit(ctx, centerX, centerY, radiusX, radiusY, trebleLight, time) {
     this.updateNodePulses(time);
-    const paletteColors = this.getPaletteColors();
+    const paletteColors = this.getSignalColors();
     const bandEnergies = [
       this.visualBass,
       this.visualMids,
@@ -667,7 +773,7 @@ export class ColdflameVisualizer {
   drawSpectrumBody(ctx, centerX, centerY, radius, midBody) {
     const points = 72;
     const rotation = 0;
-    const paletteColors = this.getPaletteColors();
+    const paletteColors = this.getSignalColors();
     const signalColors = paletteColors.length > 4 ? paletteColors.slice(2) : paletteColors;
     const spectrumColor = colorAt(signalColors, this.palettePhase + 0.38);
     ctx.save();
@@ -710,7 +816,7 @@ export class ColdflameVisualizer {
     ctx.save();
     ctx.beginPath();
     ctx.arc(centerX, centerY, arcRadius, -Math.PI / 2, -Math.PI / 2 + TAU * progress);
-    const progressColor = colorAt(this.getPaletteColors(), this.palettePhase + 0.7);
+    const progressColor = colorAt(this.getSignalColors(), this.palettePhase + 0.7);
     ctx.strokeStyle = rgba(progressColor, 0.72);
     ctx.lineWidth = 1.5;
     ctx.shadowColor = rgba(progressColor, 0.5);
@@ -733,7 +839,7 @@ export class ColdflameVisualizer {
       [padding, this.height - padding, 1, -1]
     ];
     ctx.save();
-    const trebleColor = colorAt(this.getPaletteColors(), this.palettePhase + 0.68);
+    const trebleColor = colorAt(this.getSignalColors(), this.palettePhase + 0.68);
     ctx.strokeStyle = rgba(trebleColor, Math.min(0.5, trebleLight * 0.4) * pulse);
     ctx.lineWidth = 1;
     corners.forEach(([x, y, directionX, directionY]) => {

@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#08090b">
   <meta name="color-scheme" content="dark">
+  <meta name="apple-mobile-web-app-title" content="Coldflame">
   <meta name="description" content="The complete Coldflame release archive: seven tracks, five releases, and an artwork-reactive visualizer.">
   <meta name="robots" content="noindex, nofollow">
   <link rel="canonical" href="https://doomswitch541-prog.github.io/cf-vizualizer/">
@@ -21,9 +22,10 @@
   <meta name="twitter:description" content="Seven tracks. Five releases. One artwork-reactive listening room.">
   <meta name="twitter:image" content="https://doomswitch541-prog.github.io/cf-vizualizer/assets/share/coldflame-archive-card.png">
   <title>Coldflame — Release Archive</title>
-  <link rel="icon" href="assets/coldflame/artwork-web/2024-break-me-down.jpg">
-  <link rel="stylesheet" href="styles.css?v=20260829-4">
-  <script type="module" src="app.js?v=20260829-4"></script>
+  <link rel="icon" type="image/svg+xml" href="assets/icons/cf-diamond.svg">
+  <link rel="apple-touch-icon" sizes="180x180" href="assets/icons/cf-diamond-180.png">
+  <link rel="stylesheet" href="styles.css?v=20260829-5">
+  <script type="module" src="app.js?v=20260829-5"></script>
 </head>
 <body>
   <div class="art-wash" id="art-wash" aria-hidden="true"></div>
@@ -57,7 +59,12 @@
     <nav class="catalog-rail" id="catalog-rail" aria-label="Coldflame tracks">
       <div class="rail-mobile-head">
         <span class="rail-mobile-brand">Coldflame</span>
-        <button class="queue-close" id="queue-close" type="button" aria-label="Close track list"><span aria-hidden="true">&times;</span></button>
+        <button class="queue-close" id="queue-close" type="button" aria-label="Close track list">
+          <svg class="hardcore-nav-mark" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="m7.5 7.5 9 9M16.5 7.5l-9 9"/>
+            <circle cx="5" cy="5" r="1"/><circle cx="19" cy="5" r="1"/><circle cx="19" cy="19" r="1"/><circle cx="5" cy="19" r="1"/>
+          </svg>
+        </button>
       </div>
       <div class="rail-heading">
         <span>Release chronology</span>
@@ -81,13 +88,13 @@
 
     <section class="visual-stage" id="visual-stage" aria-label="Audio-reactive artwork">
       <canvas id="visualizer-canvas" aria-hidden="true"></canvas>
-      <div class="stage-wordmark" aria-hidden="true">COLDFLAME</div>
 
       <div class="visual-anchor" id="visual-anchor">
         <div class="cover-frame">
           <img id="stage-cover" src="assets/coldflame/artwork-web/2021-lose-myself.jpg" alt="Lose Myself cover art">
           <div class="cover-sheen" aria-hidden="true"></div>
           <div class="cover-border-orbit" aria-hidden="true"><i></i><i></i></div>
+          <svg class="cover-border-trace" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><rect x="1" y="1" width="98" height="98" pathLength="1"/></svg>
         </div>
         <div class="release-caption">
           <span id="release-year">2021</span>
@@ -107,7 +114,10 @@
       </button>
 
       <button class="stage-action queue-button" id="queue-button" type="button" aria-label="Open track list" aria-controls="catalog-rail" aria-expanded="false">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7h14M5 12h14M5 17h9"/></svg>
+        <svg class="hardcore-nav-mark" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="m7.5 7.5 9 9M16.5 7.5l-9 9"/>
+          <circle cx="5" cy="5" r="1"/><circle cx="19" cy="5" r="1"/><circle cx="19" cy="19" r="1"/><circle cx="5" cy="19" r="1"/>
+        </svg>
       </button>
 
       <div class="gesture-note" id="gesture-note" aria-hidden="true">Artwork colors move with the song</div>
