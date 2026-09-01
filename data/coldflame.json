@@ -1,7 +1,7 @@
 {
-    "schemaVersion":  1,
+    "schemaVersion":  2,
     "catalogId":  "coldflame",
-    "updated":  "2026-08-28",
+    "updated":  "2026-09-01",
     "artist":  {
                    "name":  "Coldflame",
                    "location":  "Northern California",
@@ -13,6 +13,22 @@
                                  "youtubeTopic":  "https://www.youtube.com/channel/UCSkL7aYG3r7sN50AbdY7_vA"
                              }
                },
+    "mediaProviders":  {
+                           "bundled":  {
+                                           "type":  "relative",
+                                           "baseUrl":  "."
+                                       }
+                       },
+    "rights":  {
+                    "archiveCredit":  "Archive and player by RG.",
+                    "defaults":  {
+                                     "status":  "direct-permission",
+                                     "rightsHolder":  "Coldflame",
+                                     "credit":  "Music © Coldflame. Used with permission.",
+                                     "sourceLabel":  "Official audio source ↗",
+                                     "license":  null
+                                 }
+                },
     "summary":  {
                     "releaseCount":  5,
                     "trackCount":  7,
@@ -42,6 +58,8 @@
                          "artwork":  {
                                          "archivePath":  "artwork/2021-lose-myself.jpg",
                                          "visualizerPath":  "assets/coldflame/artwork/2021-lose-myself.jpg",
+                                         "provider":  "bundled",
+                                         "publicPath":  "assets/coldflame/artwork-web/2021-lose-myself.jpg",
                                          "sourceUrl":  "https://is1-ssl.mzstatic.com/image/thumb/Music115/v4/6d/dc/20/6ddc205f-7b99-6ef8-eacb-cc7bd0088244/198000527693.jpg/3000x3000bb.jpg",
                                          "width":  1400,
                                          "height":  1400,
@@ -85,6 +103,8 @@
                          "artwork":  {
                                          "archivePath":  "artwork/2022-youre-gone.jpg",
                                          "visualizerPath":  "assets/coldflame/artwork/2022-youre-gone.jpg",
+                                         "provider":  "bundled",
+                                         "publicPath":  "assets/coldflame/artwork-web/2022-youre-gone.jpg",
                                          "sourceUrl":  "https://is1-ssl.mzstatic.com/image/thumb/Music112/v4/56/95/37/569537eb-7d1d-01c5-bbea-54fd70ff8037/198004844420.jpg/3000x3000bb.jpg",
                                          "width":  3000,
                                          "height":  3000,
@@ -130,6 +150,8 @@
                          "artwork":  {
                                          "archivePath":  "artwork/2023-3.jpg",
                                          "visualizerPath":  "assets/coldflame/artwork/2023-3.jpg",
+                                         "provider":  "bundled",
+                                         "publicPath":  "assets/coldflame/artwork-web/2023-3.jpg",
                                          "sourceUrl":  "https://is1-ssl.mzstatic.com/image/thumb/Music126/v4/2a/f2/d0/2af2d039-454a-db03-e77f-d9c95be890b2/198025395123.jpg/3000x3000bb.jpg",
                                          "width":  3000,
                                          "height":  3000,
@@ -173,6 +195,8 @@
                          "artwork":  {
                                          "archivePath":  "artwork/2024-break-me-down.jpg",
                                          "visualizerPath":  "assets/coldflame/artwork/2024-break-me-down.jpg",
+                                         "provider":  "bundled",
+                                         "publicPath":  "assets/coldflame/artwork-web/2024-break-me-down.jpg",
                                          "sourceUrl":  "https://is1-ssl.mzstatic.com/image/thumb/Music126/v4/61/a6/bf/61a6bf8c-3051-16ac-62c8-5d6f7dab1fcb/198500001419.jpg/3000x3000bb.jpg",
                                          "width":  3000,
                                          "height":  3000,
@@ -216,6 +240,8 @@
                          "artwork":  {
                                          "archivePath":  "artwork/2025-die-for-me.jpg",
                                          "visualizerPath":  "assets/coldflame/artwork/2025-die-for-me.jpg",
+                                         "provider":  "bundled",
+                                         "publicPath":  "assets/coldflame/artwork-web/2025-die-for-me.jpg",
                                          "sourceUrl":  "https://is1-ssl.mzstatic.com/image/thumb/Music221/v4/30/63/d1/3063d18f-38d5-8216-1ee3-5ed974dc40f8/199900137029.jpg/3000x3000bb.jpg",
                                          "width":  1400,
                                          "height":  1400,
@@ -263,9 +289,19 @@
                        "youtubeVideoId":  "eU9u1bDCoRQ",
                        "youtubeUrl":  "https://www.youtube.com/watch?v=eU9u1bDCoRQ",
                        "officialVideoUrl":  "https://www.youtube.com/watch?v=6VP_-m_rUgo",
+                       "rights":  {
+                                      "status":  "direct-permission",
+                                      "rightsHolder":  "Coldflame",
+                                      "credit":  "Music © Coldflame. Used with permission.",
+                                      "sourceLabel":  "Official audio source ↗",
+                                      "sourceUrl":  "https://www.youtube.com/watch?v=eU9u1bDCoRQ",
+                                      "license":  null
+                                  },
                        "audio":  {
                                      "archivePath":  "audio/01-lose-myself.m4a",
                                      "visualizerPath":  "assets/coldflame/audio/01-lose-myself.m4a",
+                                     "provider":  "bundled",
+                                     "publicPath":  "assets/coldflame/audio/01-lose-myself.m4a",
                                      "mimeType":  "audio/mp4",
                                      "container":  "m4a",
                                      "codec":  "aac",
@@ -298,9 +334,19 @@
                        "youtubeVideoId":  "HmQwiGvY5qs",
                        "youtubeUrl":  "https://www.youtube.com/watch?v=HmQwiGvY5qs",
                        "officialVideoUrl":  "https://www.youtube.com/watch?v=qiD3v3NzKyg",
+                       "rights":  {
+                                      "status":  "direct-permission",
+                                      "rightsHolder":  "Coldflame",
+                                      "credit":  "Music © Coldflame. Used with permission.",
+                                      "sourceLabel":  "Official audio source ↗",
+                                      "sourceUrl":  "https://www.youtube.com/watch?v=HmQwiGvY5qs",
+                                      "license":  null
+                                  },
                        "audio":  {
                                      "archivePath":  "audio/02-youre-gone.m4a",
                                      "visualizerPath":  "assets/coldflame/audio/02-youre-gone.m4a",
+                                     "provider":  "bundled",
+                                     "publicPath":  "assets/coldflame/audio/02-youre-gone.m4a",
                                      "mimeType":  "audio/mp4",
                                      "container":  "m4a",
                                      "codec":  "aac",
@@ -333,9 +379,19 @@
                        "youtubeVideoId":  "iVjwD0pZj7A",
                        "youtubeUrl":  "https://www.youtube.com/watch?v=iVjwD0pZj7A",
                        "officialVideoUrl":  "https://www.youtube.com/watch?v=gNshVzNUPcg",
+                       "rights":  {
+                                      "status":  "direct-permission",
+                                      "rightsHolder":  "Coldflame",
+                                      "credit":  "Music © Coldflame. Used with permission.",
+                                      "sourceLabel":  "Official audio source ↗",
+                                      "sourceUrl":  "https://www.youtube.com/watch?v=iVjwD0pZj7A",
+                                      "license":  null
+                                  },
                        "audio":  {
                                      "archivePath":  "audio/03-take-my-pain.m4a",
                                      "visualizerPath":  "assets/coldflame/audio/03-take-my-pain.m4a",
+                                     "provider":  "bundled",
+                                     "publicPath":  "assets/coldflame/audio/03-take-my-pain.m4a",
                                      "mimeType":  "audio/mp4",
                                      "container":  "m4a",
                                      "codec":  "aac",
@@ -368,9 +424,19 @@
                        "youtubeVideoId":  "jkux_j3IXvk",
                        "youtubeUrl":  "https://www.youtube.com/watch?v=jkux_j3IXvk",
                        "officialVideoUrl":  null,
+                       "rights":  {
+                                      "status":  "direct-permission",
+                                      "rightsHolder":  "Coldflame",
+                                      "credit":  "Music © Coldflame. Used with permission.",
+                                      "sourceLabel":  "Official audio source ↗",
+                                      "sourceUrl":  "https://www.youtube.com/watch?v=jkux_j3IXvk",
+                                      "license":  null
+                                  },
                        "audio":  {
                                      "archivePath":  "audio/04-broken.m4a",
                                      "visualizerPath":  "assets/coldflame/audio/04-broken.m4a",
+                                     "provider":  "bundled",
+                                     "publicPath":  "assets/coldflame/audio/04-broken.m4a",
                                      "mimeType":  "audio/mp4",
                                      "container":  "m4a",
                                      "codec":  "aac",
@@ -403,9 +469,19 @@
                        "youtubeVideoId":  "TEpcO44VE3w",
                        "youtubeUrl":  "https://www.youtube.com/watch?v=TEpcO44VE3w",
                        "officialVideoUrl":  null,
+                       "rights":  {
+                                      "status":  "direct-permission",
+                                      "rightsHolder":  "Coldflame",
+                                      "credit":  "Music © Coldflame. Used with permission.",
+                                      "sourceLabel":  "Official audio source ↗",
+                                      "sourceUrl":  "https://www.youtube.com/watch?v=TEpcO44VE3w",
+                                      "license":  null
+                                  },
                        "audio":  {
                                      "archivePath":  "audio/05-love-song.m4a",
                                      "visualizerPath":  "assets/coldflame/audio/05-love-song.m4a",
+                                     "provider":  "bundled",
+                                     "publicPath":  "assets/coldflame/audio/05-love-song.m4a",
                                      "mimeType":  "audio/mp4",
                                      "container":  "m4a",
                                      "codec":  "aac",
@@ -438,9 +514,19 @@
                        "youtubeVideoId":  "X2z1iQuJesA",
                        "youtubeUrl":  "https://www.youtube.com/watch?v=X2z1iQuJesA",
                        "officialVideoUrl":  null,
+                       "rights":  {
+                                      "status":  "direct-permission",
+                                      "rightsHolder":  "Coldflame",
+                                      "credit":  "Music © Coldflame. Used with permission.",
+                                      "sourceLabel":  "Official audio source ↗",
+                                      "sourceUrl":  "https://www.youtube.com/watch?v=X2z1iQuJesA",
+                                      "license":  null
+                                  },
                        "audio":  {
                                      "archivePath":  "audio/06-break-me-down.m4a",
                                      "visualizerPath":  "assets/coldflame/audio/06-break-me-down.m4a",
+                                     "provider":  "bundled",
+                                     "publicPath":  "assets/coldflame/audio/06-break-me-down.m4a",
                                      "mimeType":  "audio/mp4",
                                      "container":  "m4a",
                                      "codec":  "aac",
@@ -473,9 +559,19 @@
                        "youtubeVideoId":  "_D3uv6BqDRI",
                        "youtubeUrl":  "https://www.youtube.com/watch?v=_D3uv6BqDRI",
                        "officialVideoUrl":  null,
+                       "rights":  {
+                                      "status":  "direct-permission",
+                                      "rightsHolder":  "Coldflame",
+                                      "credit":  "Music © Coldflame. Used with permission.",
+                                      "sourceLabel":  "Official audio source ↗",
+                                      "sourceUrl":  "https://www.youtube.com/watch?v=_D3uv6BqDRI",
+                                      "license":  null
+                                  },
                        "audio":  {
                                      "archivePath":  "audio/07-die-for-me.m4a",
                                      "visualizerPath":  "assets/coldflame/audio/07-die-for-me.m4a",
+                                     "provider":  "bundled",
+                                     "publicPath":  "assets/coldflame/audio/07-die-for-me.m4a",
                                      "mimeType":  "audio/mp4",
                                      "container":  "m4a",
                                      "codec":  "aac",

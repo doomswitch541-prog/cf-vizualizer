@@ -24,8 +24,8 @@
   <title>Coldflame — Release Archive</title>
   <link rel="icon" type="image/svg+xml" href="assets/icons/cf-diamond.svg">
   <link rel="apple-touch-icon" sizes="180x180" href="assets/icons/cf-diamond-180.png">
-  <link rel="stylesheet" href="styles.css?v=20260829-5">
-  <script type="module" src="app.js?v=20260829-5"></script>
+  <link rel="stylesheet" href="styles.css?v=20260901-1">
+  <script type="module" src="app.js?v=20260901-1"></script>
 </head>
 <body>
   <div class="art-wash" id="art-wash" aria-hidden="true"></div>
@@ -60,10 +60,7 @@
       <div class="rail-mobile-head">
         <span class="rail-mobile-brand">Coldflame</span>
         <button class="queue-close" id="queue-close" type="button" aria-label="Close track list">
-          <svg class="hardcore-nav-mark" viewBox="0 0 24 24" aria-hidden="true">
-            <path d="m7.5 7.5 9 9M16.5 7.5l-9 9"/>
-            <circle cx="5" cy="5" r="1"/><circle cx="19" cy="5" r="1"/><circle cx="19" cy="19" r="1"/><circle cx="5" cy="19" r="1"/>
-          </svg>
+          <span aria-hidden="true">&times;</span>
         </button>
       </div>
       <div class="rail-heading">
@@ -114,10 +111,7 @@
       </button>
 
       <button class="stage-action queue-button" id="queue-button" type="button" aria-label="Open track list" aria-controls="catalog-rail" aria-expanded="false">
-        <svg class="hardcore-nav-mark" viewBox="0 0 24 24" aria-hidden="true">
-          <path d="m7.5 7.5 9 9M16.5 7.5l-9 9"/>
-          <circle cx="5" cy="5" r="1"/><circle cx="19" cy="5" r="1"/><circle cx="19" cy="19" r="1"/><circle cx="5" cy="19" r="1"/>
-        </svg>
+        <span class="bars" aria-hidden="true"><span></span><span></span><span></span></span>
       </button>
 
       <div class="gesture-note" id="gesture-note" aria-hidden="true">Artwork colors move with the song</div>
@@ -185,10 +179,15 @@
         <span>Official release audio</span>
         <a id="release-link" href="https://music.apple.com/us/artist/coldflame/1572386538" target="_blank" rel="noopener">Release data ↗</a>
       </div>
+      <div class="rights-row" aria-label="Current track rights and source">
+        <p id="rights-credit">Music © Coldflame. Used with permission.</p>
+        <a id="track-source-link" href="https://www.youtube.com/channel/UCSkL7aYG3r7sN50AbdY7_vA" target="_blank" rel="noopener">Track source ↗</a>
+      </div>
     </aside>
   </main>
 
   <footer class="site-footer">
+    <p class="footer-rights"><span id="catalog-rights">Music © Coldflame. Used with permission.</span><span aria-hidden="true"> · </span><span id="archive-credit">Archive and player by RG.</span></p>
     <p>Coldflame · complete release archive · artwork-reactive playback</p>
     <p class="footer-state"><span id="audio-format">AAC / M4A</span><span aria-hidden="true">·</span><span>No tracking</span></p>
   </footer>

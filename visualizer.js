@@ -1,5 +1,16 @@
 const TAU = Math.PI * 2;
 
+export const VISUAL_OBJECT_SIGNAL_CONTRACT = Object.freeze({
+  fieldHexagon: "low-band body, mid-band body, and positive transient impact",
+  spectrumRing: "mid-band body plus live spectrum-bin contour",
+  chronologyDots: "band-mapped accents: low, mid, and high in repeating node order",
+  outerHalo: "low-band depth with overall energy and late-track progress glow",
+  paletteField: "full-palette travel accelerated by energy, band motion, flux, and impact",
+  bmtMeters: "smoothed low, mid, and high band signals",
+  coverCorners: "timed accents mixed with detected loud-to-quiet contrast",
+  progressArc: "playback position only"
+});
+
 function averageRange(values, start, end) {
   if (!values?.length) return 0;
   const safeStart = Math.max(0, Math.min(values.length - 1, start));
@@ -124,6 +135,7 @@ export class ColdflameVisualizer {
     };
     this.trackIndex = 0;
     this.trackCount = 7;
+    this.trackId = null;
     this.bass = 0;
     this.mids = 0;
     this.treble = 0;
@@ -170,6 +182,13 @@ export class ColdflameVisualizer {
     this.nextNodePulseAt = 0;
     this.lastNodePulseAt = -Infinity;
     this.frame = 0;
+    this.targetBands = [0, 0, 0];
+    this.positiveBandDeltas = [0, 0, 0];
+    this.dropContrast = 0;
+    this.telemetryEnabled = false;
+    this.telemetryFrames = [];
+    this.telemetryEvents = [];
+    this.lastTelemetrySampleAt = -Infinity;
     this.audioContext = null;
     this.analyser = null;
     this.source = null;
@@ -222,9 +241,10 @@ export class ColdflameVisualizer {
     this.stage.dataset.paletteMonochrome = this.paletteMonochrome.toFixed(3);
   }
 
-  setTrack(index, count = 7) {
+  setTrack(index, count = 7, trackId = null) {
     this.trackIndex = index;
     this.trackCount = count;
+    this.trackId = trackId;
     this.bandBaselinesReady = false;
     this.bandRangesReady = false;
     this.bandImpacts = [0, 0, 0];
@@ -234,6 +254,78 @@ export class ColdflameVisualizer {
 
   setIntensity(value) {
     this.intensity = Math.max(0.8, Math.min(2, Number(value) || 1));
+  }
+
+  setTelemetryEnabled(enabled) {
+    this.telemetryEnabled = Boolean(enabled);
+  }
+
+  clearTelemetry() {
+    this.telemetryFrames = [];
+    this.telemetryEvents = [];
+    this.lastTelemetrySampleAt = -Infinity;
+  }
+
+  recordTelemetryEvent(event) {
+    if (!this.telemetryEnabled) return;
+    this.telemetryEvents.push({
+      audioTime: Number((this.audio.currentTime || 0).toFixed(3)),
+      trackId: this.trackId,
+      ...event
+    });
+    if (this.telemetryEvents.length > 4000) this.telemetryEvents.shift();
+  }
+
+  getTelemetry() {
+    const activeNodePulses = this.nodePulses.reduce((active, pulse, index) => {
+      if (pulse) active.push({ index, band: ["low", "mid", "high"][index % 3], strength: Number(pulse.strength.toFixed(4)) });
+      return active;
+    }, []);
+
+    return {
+      schemaVersion: 1,
+      trackId: this.trackId,
+      audioTime: Number((this.audio.currentTime || 0).toFixed(3)),
+      playing: this.isPlaying,
+      inputs: {
+        targetBands: this.targetBands.map((value) => Number(value.toFixed(4))),
+        positiveBandDeltas: this.positiveBandDeltas.map((value) => Number(value.toFixed(4))),
+        bandMotion: Number(this.bandMotion.toFixed(4)),
+        flux: Number(this.audioFlux.toFixed(4)),
+        impact: Number(this.impactEnergy.toFixed(4)),
+        dropContrast: Number(this.dropContrast.toFixed(4))
+      },
+      outputs: {
+        bands: [this.visualBass, this.visualMids, this.visualTreble].map((value) => Number(value.toFixed(4))),
+        energy: Number(this.audioEnergy.toFixed(4)),
+        fieldScale: Number(this.fieldScale.toFixed(4)),
+        palettePhase: Number(this.palettePhase.toFixed(4)),
+        paletteVelocity: Number(this.paletteVelocity.toFixed(4)),
+        activeNodePulses,
+        corner: this.cornerSweep ? {
+          reason: this.cornerSweep.reason,
+          variant: this.cornerSweep.variant,
+          strength: Number(this.cornerSweep.strength.toFixed(4))
+        } : null
+      }
+    };
+  }
+
+  captureTelemetry(time) {
+    if (!this.telemetryEnabled || !this.isPlaying || time - this.lastTelemetrySampleAt < 100) return;
+    this.lastTelemetrySampleAt = time;
+    this.telemetryFrames.push(this.getTelemetry());
+    if (this.telemetryFrames.length > 18000) this.telemetryFrames.shift();
+  }
+
+  exportTelemetry() {
+    return {
+      schemaVersion: 1,
+      exportedAt: new Date().toISOString(),
+      objectSignalContract: VISUAL_OBJECT_SIGNAL_CONTRACT,
+      frames: [...this.telemetryFrames],
+      events: [...this.telemetryEvents]
+    };
   }
 
   getPaletteColors() {
@@ -282,7 +374,7 @@ export class ColdflameVisualizer {
     this.nodePulses = Array.from({ length: this.trackCount }, () => null);
   }
 
-  triggerNodePulse(time) {
+  triggerNodePulse(time, reason) {
     if (this.nodePulseOrder.length !== this.trackCount || this.nodePulseCursor >= this.nodePulseOrder.length) {
       this.resetNodePulseOrder();
     }
@@ -302,6 +394,15 @@ export class ColdflameVisualizer {
     this.stage.dataset.nodePulseCount = String(this.nodePulseCount);
     this.stage.dataset.nodePulseSeen = String(this.nodePulseSeenMask);
     this.lastNodePulseAt = time;
+    this.recordTelemetryEvent({
+      type: "chronology-dot",
+      reason,
+      nodeIndex: index,
+      band: ["low", "mid", "high"][band],
+      bandEnergy: Number(bandEnergy.toFixed(4)),
+      strength: Number(this.nodePulses[index].strength.toFixed(4)),
+      flux: Number(this.audioFlux.toFixed(4))
+    });
     const interval = 1750 + this.nextRandom() * 1250 - this.audioEnergy * 720;
     this.nextNodePulseAt = time + Math.max(820, interval);
   }
@@ -315,7 +416,7 @@ export class ColdflameVisualizer {
     const sustainedAccent = time >= this.nextNodePulseAt
       && this.audioEnergy > 0.14
       && (this.bandMotion > 0.006 || this.audioFlux > 0.012);
-    if (onset || sustainedAccent) this.triggerNodePulse(time);
+    if (onset || sustainedAccent) this.triggerNodePulse(time, onset ? "onset" : "sustained-accent");
   }
 
   resize() {
@@ -354,6 +455,13 @@ export class ColdflameVisualizer {
     this.stage.dataset.cornerAccentCount = String(this.cornerAccentCount);
     this.stage.dataset.cornerSweepReason = reason;
     this.stage.dataset.cornerVariant = variant;
+    this.recordTelemetryEvent({
+      type: "cover-corner",
+      reason,
+      variant,
+      strength: Number(safeStrength.toFixed(4)),
+      dropContrast: Number(this.dropContrast.toFixed(4))
+    });
   }
 
   updateCornerSweep(time) {
@@ -406,6 +514,7 @@ export class ColdflameVisualizer {
     }
 
     const targets = [targetBass, targetMids, targetTreble];
+    this.targetBands = [...targets];
     const targetEnergy = targetBass * 0.46 + targetMids * 0.34 + targetTreble * 0.2;
     let bandDeltas = targets.map((target, index) => target - this.previousBandTargets[index]);
     if (playing && !this.bandRangesReady && targetEnergy > 0.02) {
@@ -417,6 +526,7 @@ export class ColdflameVisualizer {
       bandDeltas = [0, 0, 0];
     }
     const positiveBands = bandDeltas.map((delta) => Math.max(0, delta));
+    this.positiveBandDeltas = [...positiveBands];
     const positiveBandFlux = positiveBands[0] * 0.46
       + positiveBands[1] * 0.34
       + positiveBands[2] * 0.2;
@@ -489,6 +599,7 @@ export class ColdflameVisualizer {
     const dropContrast = this.slowEnergy > 0.035
       ? Math.max(0, (this.slowEnergy - this.fastEnergy) / this.slowEnergy)
       : 0;
+    this.dropContrast = dropContrast;
     const dropReady = playing
       && dropContrast > 0.085
       && time - this.lastCornerSweepAt > 5200;
@@ -519,6 +630,7 @@ export class ColdflameVisualizer {
     const progress = this.audio.duration ? this.audio.currentTime / this.audio.duration : 0;
     this.stage.style.setProperty("--progress", progress.toFixed(4));
     this.updateCornerSweep(time);
+    this.captureTelemetry(time);
 
     if (this.frame % 3 === 0) {
       this.meters.bass.style.width = `${Math.max(3, visualBass * 100)}%`;

@@ -1,4 +1,5 @@
-import { ColdflameVisualizer } from "./visualizer.js?v=20260829-5";
+import { ColdflameVisualizer } from "./visualizer.js?v=20260901-1";
+import { resolveReleaseArtwork, resolveTrackAudio } from "./media-provider.js?v=20260901-1";
 
 const elements = {
   audio: document.querySelector("#audio"),
@@ -16,6 +17,10 @@ const elements = {
   trackPosition: document.querySelector("#track-position"),
   releaseCount: document.querySelector("#release-count"),
   releaseLink: document.querySelector("#release-link"),
+  rightsCredit: document.querySelector("#rights-credit"),
+  trackSourceLink: document.querySelector("#track-source-link"),
+  catalogRights: document.querySelector("#catalog-rights"),
+  archiveCredit: document.querySelector("#archive-credit"),
   paletteSwatches: document.querySelector("#palette-swatches"),
   playButton: document.querySelector("#play-button"),
   previousButton: document.querySelector("#previous-button"),
@@ -74,7 +79,18 @@ function releaseDisplayName(release) {
 }
 
 function artworkPath(release) {
-  return release.artwork.webPath || release.artwork.visualizerPath;
+  return resolveReleaseArtwork(state.catalog, release);
+}
+
+function trackRights(track) {
+  return { ...state.catalog.rights?.defaults, ...track.rights };
+}
+
+function updateRights(track) {
+  const rights = trackRights(track);
+  elements.rightsCredit.textContent = rights.credit || "Rights information unavailable.";
+  elements.trackSourceLink.href = rights.sourceUrl || track.youtubeUrl;
+  elements.trackSourceLink.textContent = rights.sourceLabel || "Track source ↗";
 }
 
 function showToast(message) {
@@ -82,6 +98,17 @@ function showToast(message) {
   elements.toast.textContent = message;
   elements.toast.classList.add("is-visible");
   state.toastTimer = window.setTimeout(() => elements.toast.classList.remove("is-visible"), 1800);
+}
+
+function downloadCalibration() {
+  const capture = visualizer.exportTelemetry();
+  const trackId = capture.frames.at(-1)?.trackId || state.catalog?.tracks[state.currentIndex]?.id || "session";
+  const blob = new Blob([JSON.stringify(capture, null, 2)], { type: "application/json" });
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = `coldflame-${trackId}-visualizer-telemetry.json`;
+  link.click();
+  window.setTimeout(() => URL.revokeObjectURL(link.href), 0);
 }
 
 function setStatus(message) {
@@ -191,7 +218,7 @@ async function selectTrack(index, { autoplay = false, updateHistory = true } = {
   const changedTrack = boundedIndex !== state.currentIndex || !elements.audio.src;
 
   state.currentIndex = boundedIndex;
-  visualizer.setTrack(boundedIndex, tracks.length);
+  visualizer.setTrack(boundedIndex, tracks.length, track.id);
   applyPalette(release);
   updateTrackButtons();
   transitionCover(release, track);
@@ -203,6 +230,7 @@ async function selectTrack(index, { autoplay = false, updateHistory = true } = {
   elements.trackPosition.textContent = `${String(boundedIndex + 1).padStart(2, "0")} / ${String(tracks.length).padStart(2, "0")}`;
   elements.releaseCount.textContent = `Release ${String(releaseIndex + 1).padStart(2, "0")} / ${String(state.catalog.releases.length).padStart(2, "0")}`;
   elements.releaseLink.href = release.appleMusicUrl;
+  updateRights(track);
   elements.duration.textContent = formatTime(track.durationMs / 1000, track.durationMs % 1000 !== 0);
   elements.duration.dateTime = track.durationIso;
   elements.playButton.setAttribute("aria-label", `Play ${track.title}`);
@@ -214,7 +242,7 @@ async function selectTrack(index, { autoplay = false, updateHistory = true } = {
     elements.seek.value = "0";
     elements.seek.style.setProperty("--range-fill", "0%");
     elements.elapsed.textContent = "0:00";
-    elements.audio.src = track.audio.visualizerPath;
+    elements.audio.src = resolveTrackAudio(state.catalog, track);
     elements.audio.load();
     setStatus("Loading archive audio");
   }
@@ -386,7 +414,8 @@ function bindEvents() {
   elements.muteButton.addEventListener("click", toggleMute);
   elements.queueButton.addEventListener("click", (event) => {
     event.stopPropagation();
-    setQueueOpen(true);
+    const opening = document.body.dataset.queueOpen !== "true";
+    setQueueOpen(opening, { restoreFocus: !opening });
   });
   elements.queueClose.addEventListener("click", () => setQueueOpen(false, { restoreFocus: true }));
   elements.queueBackdrop.addEventListener("click", () => setQueueOpen(false, { restoreFocus: true }));
@@ -482,6 +511,8 @@ async function initialize() {
     if (!response.ok) throw new Error(`Catalog request failed: ${response.status}`);
     state.catalog = await response.json();
     state.releases = new Map(state.catalog.releases.map((release) => [release.id, release]));
+    elements.catalogRights.textContent = state.catalog.rights?.defaults?.credit || "Music rights remain with their respective owner.";
+    elements.archiveCredit.textContent = state.catalog.rights?.archiveCredit || "Archive and player by RG.";
 
     const requestedTrackId = new URL(window.location.href).searchParams.get("track");
     const requestedIndex = state.catalog.tracks.findIndex((track) => track.id === requestedTrackId);
@@ -500,6 +531,19 @@ async function initialize() {
     setVisualIntensity(savedIntensity, { persist: false });
     setQueueOpen(false);
     await selectTrack(state.currentIndex, { autoplay: false, updateHistory: requestedIndex >= 0 });
+
+    const calibrationEnabled = new URL(window.location.href).searchParams.get("calibrate") === "1";
+    if (calibrationEnabled) {
+      visualizer.setTelemetryEnabled(true);
+      window.__CF_CALIBRATION__ = Object.freeze({
+        snapshot: () => visualizer.getTelemetry(),
+        export: () => visualizer.exportTelemetry(),
+        download: downloadCalibration,
+        clear: () => visualizer.clearTelemetry()
+      });
+      document.documentElement.dataset.calibrating = "true";
+      console.info("Coldflame calibration capture is active at window.__CF_CALIBRATION__");
+    }
 
     document.documentElement.dataset.ready = "true";
   } catch (error) {
