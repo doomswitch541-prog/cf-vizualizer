@@ -1077,6 +1077,14 @@ body[data-playing="true"] .play-button .pause-icon {
   margin: 0;
 }
 
+.rights-row p a,
+.footer-rights a,
+.about-rights a {
+  color: inherit;
+  text-decoration-color: var(--hairline);
+  text-underline-offset: 4px;
+}
+
 .rights-row a {
   flex: 0 0 auto;
   text-decoration-color: var(--hairline);
@@ -1722,7 +1730,7 @@ html[data-ready="true"] .site-footer {
   letter-spacing: 0.04em;
 }
 
-.about-links a {
+.about-links > a {
   padding: 17px 2px;
   border-bottom: 1px solid var(--hairline);
   color: var(--muted);
@@ -1733,7 +1741,7 @@ html[data-ready="true"] .site-footer {
   transition: color 180ms ease, border-color 180ms ease;
 }
 
-.about-links a:hover {
+.about-links > a:hover {
   border-color: var(--accent);
   color: var(--ink);
 }

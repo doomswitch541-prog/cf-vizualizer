@@ -1,5 +1,5 @@
-import { ColdflameVisualizer } from "./visualizer.js?v=20260901-1";
-import { resolveReleaseArtwork, resolveTrackAudio } from "./media-provider.js?v=20260901-1";
+import { ColdflameVisualizer } from "./visualizer.js?v=20260901-2";
+import { resolveReleaseArtwork, resolveTrackAudio } from "./media-provider.js?v=20260901-2";
 
 const elements = {
   audio: document.querySelector("#audio"),
@@ -86,9 +86,27 @@ function trackRights(track) {
   return { ...state.catalog.rights?.defaults, ...track.rights };
 }
 
+function renderRightsCredit(container, rights) {
+  const holder = rights.rightsHolder || state.catalog.artist.name;
+  const holderUrl = rights.rightsHolderUrl || state.catalog.artist.links?.linktree;
+  const prefix = rights.creditPrefix || "All rights go to";
+
+  if (!holderUrl) {
+    container.textContent = `${prefix} ${holder}.`;
+    return;
+  }
+
+  const link = document.createElement("a");
+  link.href = holderUrl;
+  link.target = "_blank";
+  link.rel = "noopener";
+  link.textContent = holder;
+  container.replaceChildren(document.createTextNode(`${prefix} `), link, document.createTextNode("."));
+}
+
 function updateRights(track) {
   const rights = trackRights(track);
-  elements.rightsCredit.textContent = rights.credit || "Rights information unavailable.";
+  renderRightsCredit(elements.rightsCredit, rights);
   elements.trackSourceLink.href = rights.sourceUrl || track.youtubeUrl;
   elements.trackSourceLink.textContent = rights.sourceLabel || "Track source ↗";
 }
@@ -511,7 +529,7 @@ async function initialize() {
     if (!response.ok) throw new Error(`Catalog request failed: ${response.status}`);
     state.catalog = await response.json();
     state.releases = new Map(state.catalog.releases.map((release) => [release.id, release]));
-    elements.catalogRights.textContent = state.catalog.rights?.defaults?.credit || "Music rights remain with their respective owner.";
+    renderRightsCredit(elements.catalogRights, state.catalog.rights?.defaults || {});
     elements.archiveCredit.textContent = state.catalog.rights?.archiveCredit || "Archive and player by RG.";
 
     const requestedTrackId = new URL(window.location.href).searchParams.get("track");
